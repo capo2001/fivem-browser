@@ -438,7 +438,10 @@ class ApiService {
         throw SocketException('DoH-Auflösung fehlgeschlagen für ${url.host}');
       }
       final socket = await Socket.connect(ip, url.port, timeout: timeout);
-      return ConnectionTask.fromSocket(socket, () => socket.destroy());
+      return ConnectionTask.fromSocket(
+        Future.value(socket),
+        () => socket.destroy(),
+      );
     };
     try {
       final request = await client.getUrl(uri);
