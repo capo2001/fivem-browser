@@ -400,30 +400,48 @@ class ApiService {
         msg.contains('No address associated with hostname');
   }
 
-  static Future<InternetAddress?> _resolveViaDoh(String host) async {
+  // Two independent public DoH resolvers, tried in order, in case a
+  // network specifically blocks one well-known resolver IP.
+  static const List<String> _dohProviders = [
+    'https://1.1.1.1/dns-query',
+    'https://8.8.8.8/resolve',
+  ];
+
+  static Future<InternetAddress> _resolveViaDoh(String host) async {
     final cached = _dohIpCache[host];
     if (cached != null) return cached;
-    try {
-      final res = await http.get(
-        Uri.parse('https://1.1.1.1/dns-query?name=$host&type=A'),
-        headers: const {'Accept': 'application/dns-json'},
-      ).timeout(const Duration(seconds: 10));
-      if (res.statusCode != 200) return null;
-      final decoded = jsonDecode(res.body);
-      if (decoded is! Map || decoded['Answer'] is! List) return null;
-      for (final answer in decoded['Answer'] as List) {
-        if (answer is Map && answer['type'] == 1 && answer['data'] is String) {
-          final ip = InternetAddress.tryParse(answer['data'] as String);
-          if (ip != null) {
-            _dohIpCache[host] = ip;
-            return ip;
+    final errors = <String>[];
+    for (final base in _dohProviders) {
+      try {
+        final res = await http.get(
+          Uri.parse('$base?name=$host&type=A'),
+          headers: const {'Accept': 'application/dns-json'},
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode != 200) {
+          errors.add('$base: HTTP ${res.statusCode}');
+          continue;
+        }
+        final decoded = jsonDecode(res.body);
+        if (decoded is Map && decoded['Answer'] is List) {
+          for (final answer in decoded['Answer'] as List) {
+            if (answer is Map &&
+                answer['type'] == 1 &&
+                answer['data'] is String) {
+              final ip = InternetAddress.tryParse(answer['data'] as String);
+              if (ip != null) {
+                _dohIpCache[host] = ip;
+                return ip;
+              }
+            }
           }
         }
+        errors.add('$base: keine A-Record-Antwort');
+      } catch (e) {
+        errors.add('$base: $e');
       }
-      return null;
-    } catch (_) {
-      return null;
     }
+    throw ApiException(
+        'DoH-Auflösung fehlgeschlagen für $host (${errors.join(' | ')})');
   }
 
   static Future<http.Response> _getViaDoh(
@@ -434,9 +452,6 @@ class ApiService {
     client.connectionTimeout = timeout;
     client.connectionFactory = (url, proxyHost, proxyPort) async {
       final ip = await _resolveViaDoh(url.host);
-      if (ip == null) {
-        throw SocketException('DoH-Auflösung fehlgeschlagen für ${url.host}');
-      }
       final socket = await Socket.connect(ip, url.port, timeout: timeout);
       return ConnectionTask.fromSocket(
         Future.value(socket),
