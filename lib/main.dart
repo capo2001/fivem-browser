@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -278,9 +279,10 @@ class ApiService {
     final attemptErrors = <String>[];
     for (final url in _topUrls) {
       try {
-        final res = await http
-            .get(Uri.parse(url), headers: _headers)
-            .timeout(const Duration(seconds: 60));
+        final res = await _getWithDohFallback(
+          Uri.parse(url),
+          timeout: const Duration(seconds: 60),
+        );
         if (res.statusCode == 200) {
           final servers = await compute(_parseList, res.body);
           if (servers.isNotEmpty) return servers;
@@ -345,9 +347,10 @@ class ApiService {
     for (final base in _singleUrls) {
       final url = '$base$code';
       try {
-        final res = await http
-            .get(Uri.parse(url), headers: _headers)
-            .timeout(const Duration(seconds: 20));
+        final res = await _getWithDohFallback(
+          Uri.parse(url),
+          timeout: const Duration(seconds: 20),
+        );
         if (res.statusCode != 200) {
           attemptErrors.add('$url: HTTP ${res.statusCode}');
           continue;
@@ -369,6 +372,83 @@ class ApiService {
     }
     throw ApiException(
         'Serverdetails konnten nicht geladen werden.\n${attemptErrors.join('\n')}');
+  }
+
+  static final Map<String, InternetAddress> _dohIpCache = {};
+
+  // Some networks filter the plain system DNS resolver (e.g. carrier
+  // "youth protection" filters or a local ad-blocking VPN) while leaving
+  // browsers unaffected because they use encrypted DNS-over-HTTPS. If the
+  // normal request fails with a DNS lookup error, fall back to resolving
+  // the host via Cloudflare's DoH endpoint and connecting to that IP
+  // directly, mirroring what the browser does under the hood.
+  static Future<http.Response> _getWithDohFallback(
+    Uri uri, {
+    required Duration timeout,
+  }) async {
+    try {
+      return await http.get(uri, headers: _headers).timeout(timeout);
+    } catch (e) {
+      if (!_looksLikeDnsFailure(e)) rethrow;
+      return _getViaDoh(uri, timeout: timeout);
+    }
+  }
+
+  static bool _looksLikeDnsFailure(Object e) {
+    final msg = e.toString();
+    return msg.contains('Failed host lookup') ||
+        msg.contains('No address associated with hostname');
+  }
+
+  static Future<InternetAddress?> _resolveViaDoh(String host) async {
+    final cached = _dohIpCache[host];
+    if (cached != null) return cached;
+    try {
+      final res = await http.get(
+        Uri.parse('https://1.1.1.1/dns-query?name=$host&type=A'),
+        headers: const {'Accept': 'application/dns-json'},
+      ).timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) return null;
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map || decoded['Answer'] is! List) return null;
+      for (final answer in decoded['Answer'] as List) {
+        if (answer is Map && answer['type'] == 1 && answer['data'] is String) {
+          final ip = InternetAddress.tryParse(answer['data'] as String);
+          if (ip != null) {
+            _dohIpCache[host] = ip;
+            return ip;
+          }
+        }
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<http.Response> _getViaDoh(
+    Uri uri, {
+    required Duration timeout,
+  }) async {
+    final client = HttpClient();
+    client.connectionTimeout = timeout;
+    client.connectionFactory = (url, proxyHost, proxyPort) async {
+      final ip = await _resolveViaDoh(url.host);
+      if (ip == null) {
+        throw SocketException('DoH-Auflösung fehlgeschlagen für ${url.host}');
+      }
+      final socket = await Socket.connect(ip, url.port, timeout: timeout);
+      return ConnectionTask.fromSocket(socket, () => socket.destroy());
+    };
+    try {
+      final request = await client.getUrl(uri);
+      _headers.forEach(request.headers.set);
+      final response = await request.close().timeout(timeout);
+      final body = await response.transform(utf8.decoder).join();
+      return http.Response(body, response.statusCode);
+    } finally {
+      client.close(force: true);
+    }
   }
 }
 
