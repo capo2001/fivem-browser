@@ -252,8 +252,12 @@ class ApiException implements Exception {
 
 class ApiService {
   static const Map<String, String> _headers = {
-    'User-Agent': 'Mozilla/5.0 (Linux; Android 13) FivemBrowser/1.0',
-    'Accept': 'application/json',
+    'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8',
+    'Origin': 'https://servers.fivem.net',
+    'Referer': 'https://servers.fivem.net/',
   };
 
   static const List<String> _topUrls = [
@@ -263,7 +267,7 @@ class ApiService {
   ];
 
   static Future<List<GameServer>> fetchTopServers() async {
-    Object? lastError;
+    final attemptErrors = <String>[];
     for (final url in _topUrls) {
       try {
         final res = await http
@@ -272,15 +276,16 @@ class ApiService {
         if (res.statusCode == 200) {
           final servers = _parseList(res.body);
           if (servers.isNotEmpty) return servers;
+          attemptErrors.add('$url: leere Antwort');
         } else {
-          lastError = ApiException('HTTP ${res.statusCode} bei $url');
+          attemptErrors.add('$url: HTTP ${res.statusCode}');
         }
       } catch (e) {
-        lastError = e;
+        attemptErrors.add('$url: $e');
       }
     }
     throw ApiException(
-        lastError == null ? 'Serverliste konnte nicht geladen werden.' : 'Serverliste konnte nicht geladen werden: $lastError');
+        'Serverliste konnte nicht geladen werden.\n${attemptErrors.join('\n')}');
   }
 
   static List<GameServer> _parseList(String body) {

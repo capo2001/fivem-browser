@@ -33,6 +33,16 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate unique debug-signing keystore
+        run: |
+          rm -f "$HOME/.android/debug.keystore"
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android -keypass android \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=FiveM Browser,O=FiveM Browser,C=DE"
+
       - name: Build release APK
         run: flutter build apk --release
 
