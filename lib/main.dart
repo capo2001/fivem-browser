@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -260,10 +261,17 @@ class ApiService {
     'Referer': 'https://servers.fivem.net/',
   };
 
+  // The site doesn't have a server-side "top N by country" route: it
+  // downloads the full server dump via a redirect-based stream endpoint
+  // and filters/sorts it client-side, so we do the same.
   static const List<String> _topUrls = [
-    'https://servers-frontend.fivem.net/api/servers/top/de/100',
-    'https://servers-frontend.fivem.net/api/servers/top/de',
-    'https://frontend.cfx-services.net/api/servers/top/de/100',
+    'https://frontend.cfx-services.net/api/servers/streamRedir/',
+    'https://servers-frontend.fivem.net/api/servers/streamRedir/',
+  ];
+
+  static const List<String> _singleUrls = [
+    'https://frontend.cfx-services.net/api/servers/single/',
+    'https://servers-frontend.fivem.net/api/servers/single/',
   ];
 
   static Future<List<GameServer>> fetchTopServers() async {
@@ -272,9 +280,9 @@ class ApiService {
       try {
         final res = await http
             .get(Uri.parse(url), headers: _headers)
-            .timeout(const Duration(seconds: 15));
+            .timeout(const Duration(seconds: 60));
         if (res.statusCode == 200) {
-          final servers = _parseList(res.body);
+          final servers = await compute(_parseList, res.body);
           if (servers.isNotEmpty) return servers;
           attemptErrors.add('$url: leere Antwort');
         } else {
@@ -288,15 +296,36 @@ class ApiService {
         'Serverliste konnte nicht geladen werden.\n${attemptErrors.join('\n')}');
   }
 
+  // Runs in a background isolate via compute() since the full dump can be
+  // several megabytes and tens of thousands of entries.
   static List<GameServer> _parseList(String body) {
-    final decoded = jsonDecode(body);
-    List<dynamic> rawList;
-    if (decoded is Map && decoded['Data'] is List) {
-      rawList = decoded['Data'] as List;
-    } else if (decoded is List) {
-      rawList = decoded;
-    } else {
-      rawList = const [];
+    final trimmed = body.trim();
+    List<dynamic> rawList = const [];
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is Map && decoded['Data'] is List) {
+        rawList = decoded['Data'] as List;
+      } else if (decoded is List) {
+        rawList = decoded;
+      } else if (decoded is Map) {
+        rawList = decoded.values.toList();
+      }
+    } on FormatException {
+      // Not a single JSON document: fall back to newline-delimited JSON,
+      // one server entry per line.
+      rawList = trimmed
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .map((line) {
+            try {
+              return jsonDecode(line);
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<Object>()
+          .toList();
     }
     final result = <GameServer>[];
     for (final item in rawList) {
@@ -312,26 +341,34 @@ class ApiService {
   }
 
   static Future<GameServer> fetchServerDetail(String code) async {
-    final url = 'https://servers-frontend.fivem.net/api/servers/single/$code';
-    final res = await http
-        .get(Uri.parse(url), headers: _headers)
-        .timeout(const Duration(seconds: 15));
-    if (res.statusCode != 200) {
-      throw ApiException('Serverdetails konnten nicht geladen werden (${res.statusCode}).');
-    }
-    final decoded = jsonDecode(res.body);
-    Map<String, dynamic>? entry;
-    if (decoded is Map) {
-      if (decoded['Data'] is Map) {
-        entry = (decoded['Data'] as Map).cast<String, dynamic>();
-      } else if (decoded['EndPoint'] != null) {
-        entry = decoded.cast<String, dynamic>();
+    final attemptErrors = <String>[];
+    for (final base in _singleUrls) {
+      final url = '$base$code';
+      try {
+        final res = await http
+            .get(Uri.parse(url), headers: _headers)
+            .timeout(const Duration(seconds: 20));
+        if (res.statusCode != 200) {
+          attemptErrors.add('$url: HTTP ${res.statusCode}');
+          continue;
+        }
+        final decoded = jsonDecode(res.body);
+        Map<String, dynamic>? entry;
+        if (decoded is Map) {
+          if (decoded['Data'] is Map) {
+            entry = (decoded['Data'] as Map).cast<String, dynamic>();
+          } else if (decoded['EndPoint'] != null) {
+            entry = decoded.cast<String, dynamic>();
+          }
+        }
+        if (entry != null) return GameServer.fromEntry(entry);
+        attemptErrors.add('$url: unerwartetes Antwortformat');
+      } catch (e) {
+        attemptErrors.add('$url: $e');
       }
     }
-    if (entry == null) {
-      throw ApiException('Unerwartetes Antwortformat vom Server.');
-    }
-    return GameServer.fromEntry(entry);
+    throw ApiException(
+        'Serverdetails konnten nicht geladen werden.\n${attemptErrors.join('\n')}');
   }
 }
 
@@ -789,7 +826,20 @@ class _ServerListPageState extends State<ServerListPage> {
 
   Widget _buildBody(List<GameServer> filtered) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2.4));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: kAccent, strokeWidth: 2.4),
+            const SizedBox(height: 14),
+            Text(
+              'Lade komplette Serverliste…\ndas kann bis zu 30 Sekunden dauern',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.45)),
+            ),
+          ],
+        ),
+      );
     }
     if (_error != null) {
       return Center(
