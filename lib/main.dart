@@ -25,7 +25,7 @@ class FivemBrowserApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final base = ThemeData.dark(useMaterial3: true);
     return MaterialApp(
-      title: 'FiveM Browser',
+      title: 'Fserver',
       debugShowCheckedModeBanner: false,
       theme: base.copyWith(
         scaffoldBackgroundColor: kBg,
@@ -220,15 +220,38 @@ class GameServer {
     return endPoint;
   }
 
-  String? get countryCode {
+  // `vars.locale` is free text set by each server operator (not a
+  // validated ISO code), so raw values are wildly inconsistent ("DE",
+  // "GER", "D", "USA", "EUA", ...). Only a handful of countries are
+  // curated into flags; everything else shows no country badge.
+  static const Map<String, Set<String>> _countryAliasGroups = {
+    'DE': {'DE', 'GER', 'GERMANY', 'DEUTSCHLAND', 'D', 'DA'},
+    'IT': {'IT', 'ITA', 'ITALY', 'ITALIA'},
+    'US': {'US', 'USA', 'EUA', 'AMERICA', 'UNITEDSTATES'},
+  };
+
+  static const Map<String, String> countryFlags = {
+    'DE': '🇩🇪',
+    'IT': '🇮🇹',
+    'US': '🇺🇸',
+  };
+
+  String? get countryGroup {
     final locale = vars.locale;
     if (locale == null || locale.isEmpty) return null;
-    final parts = locale.split(RegExp(r'[-_]'));
-    if (parts.length >= 2 && parts.last.length <= 3) {
-      return parts.last.toUpperCase();
+    final normalized = locale.toUpperCase().trim();
+    final parts =
+        normalized.split(RegExp(r'[-_\s]+')).where((p) => p.isNotEmpty);
+    final candidates = <String>{normalized, ...parts};
+    for (final entry in _countryAliasGroups.entries) {
+      if (candidates.any(entry.value.contains)) return entry.key;
     }
-    if (parts.first.length <= 3) return parts.first.toUpperCase();
     return null;
+  }
+
+  String? get countryFlag {
+    final group = countryGroup;
+    return group != null ? countryFlags[group] : null;
   }
 
   Set<String> get tagsLower => vars.tags.map((t) => t.toLowerCase()).toSet();
@@ -237,7 +260,7 @@ class GameServer {
       svMaxclients > 0 ? (clients / svMaxclients).clamp(0, 1).toDouble() : 0.0;
 
   String get iconUrl =>
-      'https://servers-frontend.fivem.net/api/servers/icon/$code/$iconVersion.png';
+      'https://frontend.cfx-services.net/api/servers/icon/$code/$iconVersion.png';
 
   String get joinUrl => 'cfx.re/join/$code';
 }
@@ -796,15 +819,9 @@ class _ServerListPageState extends State<ServerListPage> {
     }
   }
 
-  List<String> get _availableCountries {
-    final set = <String>{};
-    for (final s in _servers) {
-      final c = s.countryCode;
-      if (c != null) set.add(c);
-    }
-    final list = set.toList()..sort();
-    return list;
-  }
+  // Curated, fixed set rather than derived from data - `vars.locale` is
+  // free text and produces dozens of near-duplicate junk values.
+  static const List<String> _availableCountries = ['DE', 'IT', 'US'];
 
   List<String> get _availableTags {
     final set = <String>{};
@@ -829,7 +846,7 @@ class _ServerListPageState extends State<ServerListPage> {
       if (_hideFull && s.svMaxclients > 0 && s.clients >= s.svMaxclients) {
         return false;
       }
-      if (_selectedCountry != null && s.countryCode != _selectedCountry) {
+      if (_selectedCountry != null && s.countryGroup != _selectedCountry) {
         return false;
       }
       if (scriptQuery.isNotEmpty &&
@@ -1023,7 +1040,7 @@ class _ServerListPageState extends State<ServerListPage> {
                 children: countries.map((c) {
                   final active = _selectedCountry == c;
                   return Pill(
-                    text: c,
+                    text: GameServer.countryFlags[c] ?? c,
                     active: active,
                     onTap: () => setState(() {
                       _selectedCountry = active ? null : c;
@@ -1190,15 +1207,10 @@ class ServerTile extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    if (server.countryCode != null)
+                    if (server.countryFlag != null)
                       Text(
-                        server.countryCode!,
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.45),
-                          letterSpacing: 0.4,
-                        ),
+                        server.countryFlag!,
+                        style: const TextStyle(fontSize: 15),
                       ),
                     const SizedBox(height: 4),
                     Text(
@@ -1319,11 +1331,16 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
     setState(() => _refreshing = true);
     try {
       final detail = await ApiService.fetchServerDetail(_server.code);
-      if (mounted) {
+      // The single-server endpoint has proven flaky; never let a
+      // successful-but-empty response overwrite the good data we already
+      // have from the list.
+      if (mounted && detail.hostname.isNotEmpty) {
         setState(() {
           _server = detail;
           _refreshing = false;
         });
+      } else if (mounted) {
+        setState(() => _refreshing = false);
       }
     } catch (_) {
       if (mounted) setState(() => _refreshing = false);

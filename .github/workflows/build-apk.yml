@@ -38,8 +38,17 @@ jobs:
           fi
           grep -n 'uses-permission' "$MANIFEST"
 
+      - name: Set app display name to Fserver
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          sed -i 's#android:label="[^"]*"#android:label="Fserver"#' "$MANIFEST"
+          grep -n 'android:label' "$MANIFEST"
+
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
 
       - name: Generate unique debug-signing keystore
         run: |
