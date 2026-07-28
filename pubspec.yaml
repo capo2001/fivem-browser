@@ -10,6 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.2
+  shared_preferences: ^2.3.3
+  flutter_local_notifications: ^18.0.1
+  workmanager: ^0.5.2
 
 dev_dependencies:
   flutter_test:

@@ -8,13 +8,240 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:workmanager/workmanager.dart';
 
 const Color kBg = Color(0xFF070A0F);
-const Color kAccent = Color(0xFFD4D8DF);
 const Color kSurface = Color(0xFF10141C);
 const double kRadius = 5;
 
-void main() {
+Color get kAccent => AppState.I.accentColor;
+
+const String kFavoriteCheckTask = 'favoriteCheckTask';
+
+// ---------------------------------------------------------------------------
+// Themes
+// ---------------------------------------------------------------------------
+
+class AppThemeOption {
+  final String key;
+  final String labelDe;
+  final String labelEn;
+  final Color accent;
+  const AppThemeOption(this.key, this.labelDe, this.labelEn, this.accent);
+}
+
+const List<AppThemeOption> kThemeOptions = [
+  AppThemeOption('silver', 'Silber', 'Silver', Color(0xFFD4D8DF)),
+  AppThemeOption('blue', 'Blau', 'Blue', Color(0xFF4C8DFF)),
+  AppThemeOption('gold', 'Gold', 'Gold', Color(0xFFE0B45A)),
+];
+
+AppThemeOption themeByKey(String key) =>
+    kThemeOptions.firstWhere((t) => t.key == key, orElse: () => kThemeOptions.first);
+
+// ---------------------------------------------------------------------------
+// Localization (lightweight - no codegen, just a lookup table)
+// ---------------------------------------------------------------------------
+
+const Map<String, Map<String, String>> _strings = {
+  'appName': {'de': 'Fserver', 'en': 'Fserver'},
+  'serverList': {'de': 'Serverliste', 'en': 'Server list'},
+  'favorites': {'de': 'Favoriten', 'en': 'Favorites'},
+  'favoritesSubtitle': {'de': 'Deine gespeicherten Server', 'en': 'Your saved servers'},
+  'serverListSubtitle': {'de': 'Alle Server durchsuchen', 'en': 'Browse all servers'},
+  'settings': {'de': 'Einstellungen', 'en': 'Settings'},
+  'search': {'de': 'Server suchen', 'en': 'Search servers'},
+  'retry': {'de': 'Erneut versuchen', 'en': 'Retry'},
+  'noServersFound': {'de': 'Keine Server gefunden.', 'en': 'No servers found.'},
+  'noFavoritesYet': {'de': 'Noch keine Favoriten. Tippe auf den Stern in einem Serverprofil.', 'en': 'No favorites yet. Tap the star on a server profile.'},
+  'loading': {'de': 'Lade komplette Serverliste…\ndas kann bis zu 30 Sekunden dauern', 'en': 'Loading full server list…\nthis can take up to 30 seconds'},
+  'hideEmpty': {'de': 'Leere ausblenden', 'en': 'Hide empty'},
+  'hideFull': {'de': 'Volle ausblenden', 'en': 'Hide full'},
+  'country': {'de': 'Land', 'en': 'Country'},
+  'tagsHint': {'de': 'Tags (1x einschließen, 2x ausschließen)', 'en': 'Tags (tap once to include, twice to exclude)'},
+  'join': {'de': 'Beitreten', 'en': 'Join'},
+  'copied': {'de': 'Kopiert', 'en': 'Copied'},
+  'overview': {'de': 'Übersicht', 'en': 'Overview'},
+  'scripts': {'de': 'Scripts', 'en': 'Scripts'},
+  'filterScripts': {'de': 'Script filtern', 'en': 'Filter scripts'},
+  'noScriptsFound': {'de': 'Keine Scripts gefunden.', 'en': 'No scripts found.'},
+  'gametype': {'de': 'Gametype', 'en': 'Gametype'},
+  'map': {'de': 'Map', 'en': 'Map'},
+  'players': {'de': 'Spieler', 'en': 'Players'},
+  'boost': {'de': 'Boost', 'en': 'Boost'},
+  'onesync': {'de': 'OneSync', 'en': 'OneSync'},
+  'active': {'de': 'Aktiv', 'en': 'Active'},
+  'inactive': {'de': 'Inaktiv', 'en': 'Inactive'},
+  'build': {'de': 'Build', 'en': 'Build'},
+  'language': {'de': 'Sprache', 'en': 'Language'},
+  'tags': {'de': 'Tags', 'en': 'Tags'},
+  'onboardingWelcome': {'de': 'Willkommen', 'en': 'Welcome'},
+  'onboardingLanguage': {'de': 'Wähle deine Sprache', 'en': 'Choose your language'},
+  'onboardingTheme': {'de': 'Wähle dein Farbschema', 'en': 'Choose your color scheme'},
+  'continueLabel': {'de': 'Weiter', 'en': 'Continue'},
+  'getStarted': {'de': 'Los geht\'s', 'en': 'Get started'},
+  'appLanguage': {'de': 'App-Sprache', 'en': 'App language'},
+  'colorScheme': {'de': 'Farbschema', 'en': 'Color scheme'},
+  'notifications': {'de': 'Benachrichtigungen', 'en': 'Notifications'},
+  'notificationsDesc': {'de': 'Benachrichtigung senden, wenn ein favorisierter Server genug Spieler hat', 'en': 'Notify me when a favorite server has enough players'},
+  'notificationThreshold': {'de': 'Ab wie vielen Spielern benachrichtigen', 'en': 'Notify from this many players'},
+  'back': {'de': 'Zurück', 'en': 'Back'},
+};
+
+String tr(String key) {
+  final lang = AppState.I.language;
+  return _strings[key]?[lang] ?? _strings[key]?['de'] ?? key;
+}
+
+// ---------------------------------------------------------------------------
+// App state & persistence
+// ---------------------------------------------------------------------------
+
+class AppState extends ChangeNotifier {
+  AppState._();
+  static final AppState I = AppState._();
+
+  String language = 'de';
+  String themeKey = 'silver';
+  bool notificationsEnabled = false;
+  int notificationThreshold = 10;
+  Set<String> favorites = {};
+  bool onboardingDone = false;
+
+  Color get accentColor => themeByKey(themeKey).accent;
+
+  Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    language = prefs.getString('language') ?? 'de';
+    themeKey = prefs.getString('themeKey') ?? 'silver';
+    notificationsEnabled = prefs.getBool('notificationsEnabled') ?? false;
+    notificationThreshold = prefs.getInt('notificationThreshold') ?? 10;
+    favorites = (prefs.getStringList('favorites') ?? const []).toSet();
+    onboardingDone = prefs.getBool('onboardingDone') ?? false;
+  }
+
+  Future<void> _persist() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language', language);
+    await prefs.setString('themeKey', themeKey);
+    await prefs.setBool('notificationsEnabled', notificationsEnabled);
+    await prefs.setInt('notificationThreshold', notificationThreshold);
+    await prefs.setStringList('favorites', favorites.toList());
+    await prefs.setBool('onboardingDone', onboardingDone);
+  }
+
+  Future<void> setLanguage(String lang) async {
+    language = lang;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> setThemeKey(String key) async {
+    themeKey = key;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> setNotificationsEnabled(bool value) async {
+    notificationsEnabled = value;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> setNotificationThreshold(int value) async {
+    notificationThreshold = value;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> completeOnboarding() async {
+    onboardingDone = true;
+    notifyListeners();
+    await _persist();
+  }
+
+  bool isFavorite(String code) => favorites.contains(code);
+
+  Future<void> toggleFavorite(String code) async {
+    if (!favorites.add(code)) favorites.remove(code);
+    notifyListeners();
+    await _persist();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Background favorite-player-count check + local notifications
+// ---------------------------------------------------------------------------
+
+Future<void> _showFavoriteNotification(FlutterLocalNotificationsPlugin plugin, int id, String hostname, int clients) async {
+  const details = NotificationDetails(
+    android: AndroidNotificationDetails(
+      'favorite_server_channel',
+      'Favoriten-Benachrichtigungen',
+      channelDescription: 'Benachrichtigungen für favorisierte Server',
+      importance: Importance.high,
+      priority: Priority.high,
+    ),
+  );
+  await plugin.show(id, hostname, 'hat gerade $clients Spieler', details);
+}
+
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool('notificationsEnabled') ?? false;
+      final favorites = prefs.getStringList('favorites') ?? const [];
+      if (!enabled || favorites.isEmpty) return true;
+      final threshold = prefs.getInt('notificationThreshold') ?? 10;
+
+      final plugin = FlutterLocalNotificationsPlugin();
+      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      await plugin.initialize(const InitializationSettings(android: androidInit));
+
+      final servers = await ApiService.fetchTopServers();
+      final byCode = {for (final s in servers) s.code: s};
+      var notificationId = 5000;
+      for (final code in favorites) {
+        final server = byCode[code];
+        if (server == null) continue;
+        if (server.clients >= threshold) {
+          await _showFavoriteNotification(plugin, notificationId++, server.hostname, server.clients);
+        }
+      }
+    } catch (_) {
+      // Best-effort background task - failures shouldn't crash anything.
+    }
+    return true;
+  });
+}
+
+Future<void> _initNotifications() async {
+  final plugin = FlutterLocalNotificationsPlugin();
+  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+  await plugin.initialize(const InitializationSettings(android: androidInit));
+  await plugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.requestNotificationsPermission();
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppState.I.load();
+  await _initNotifications();
+  try {
+    await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+    await Workmanager().registerPeriodicTask(
+      kFavoriteCheckTask,
+      kFavoriteCheckTask,
+      frequency: const Duration(minutes: 15),
+    );
+  } catch (_) {
+    // Background scheduling is best-effort; the app still works without it.
+  }
   runApp(const FivemBrowserApp());
 }
 
@@ -23,35 +250,40 @@ class FivemBrowserApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = ThemeData.dark(useMaterial3: true);
-    return MaterialApp(
-      title: 'Fserver',
-      debugShowCheckedModeBanner: false,
-      theme: base.copyWith(
-        scaffoldBackgroundColor: kBg,
-        colorScheme: base.colorScheme.copyWith(
-          brightness: Brightness.dark,
-          primary: kAccent,
-          secondary: kAccent,
-          surface: kSurface,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          surfaceTintColor: Colors.transparent,
-          foregroundColor: Colors.white,
-        ),
-        splashFactory: NoSplash.splashFactory,
-        highlightColor: Colors.transparent,
-        textTheme: base.textTheme.apply(
-          bodyColor: Colors.white.withValues(alpha: 0.92),
-          displayColor: Colors.white,
-          fontSizeFactor: 0.93,
-        ),
-        dividerColor: Colors.white.withValues(alpha: 0.08),
-        useMaterial3: true,
-      ),
-      home: const ServerListPage(),
+    return ListenableBuilder(
+      listenable: AppState.I,
+      builder: (context, _) {
+        final base = ThemeData.dark(useMaterial3: true);
+        return MaterialApp(
+          title: 'Fserver',
+          debugShowCheckedModeBanner: false,
+          theme: base.copyWith(
+            scaffoldBackgroundColor: kBg,
+            colorScheme: base.colorScheme.copyWith(
+              brightness: Brightness.dark,
+              primary: kAccent,
+              secondary: kAccent,
+              surface: kSurface,
+            ),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
+              foregroundColor: Colors.white,
+            ),
+            splashFactory: NoSplash.splashFactory,
+            highlightColor: Colors.transparent,
+            textTheme: base.textTheme.apply(
+              bodyColor: Colors.white.withValues(alpha: 0.92),
+              displayColor: Colors.white,
+              fontSizeFactor: 0.93,
+            ),
+            dividerColor: Colors.white.withValues(alpha: 0.08),
+            useMaterial3: true,
+          ),
+          home: AppState.I.onboardingDone ? const MainMenuPage() : const OnboardingPage(),
+        );
+      },
     );
   }
 }
@@ -774,7 +1006,6 @@ class _ServerListPageState extends State<ServerListPage> {
 
   bool _filtersOpen = false;
   final TextEditingController _searchCtrl = TextEditingController();
-  final TextEditingController _scriptCtrl = TextEditingController();
   bool _hideEmpty = false;
   bool _hideFull = false;
   String? _selectedCountry;
@@ -785,13 +1016,11 @@ class _ServerListPageState extends State<ServerListPage> {
     super.initState();
     _load();
     _searchCtrl.addListener(() => setState(() {}));
-    _scriptCtrl.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
-    _scriptCtrl.dispose();
     super.dispose();
   }
 
@@ -837,7 +1066,6 @@ class _ServerListPageState extends State<ServerListPage> {
 
   List<GameServer> get _filtered {
     final query = _searchCtrl.text.trim().toLowerCase();
-    final scriptQuery = _scriptCtrl.text.trim().toLowerCase();
     final activeTagFilters =
         _tagStates.entries.where((e) => e.value != TagState.neutral).toList();
 
@@ -850,10 +1078,6 @@ class _ServerListPageState extends State<ServerListPage> {
         return false;
       }
       if (_selectedCountry != null && s.countryGroup != _selectedCountry) {
-        return false;
-      }
-      if (scriptQuery.isNotEmpty &&
-          !s.resources.any((r) => r.toLowerCase().contains(scriptQuery))) {
         return false;
       }
       for (final entry in activeTagFilters) {
@@ -907,9 +1131,14 @@ class _ServerListPageState extends State<ServerListPage> {
         children: [
           Row(
             children: [
-              const Text(
-                'Server',
-                style: TextStyle(
+              _iconButton(
+                icon: Icons.arrow_back,
+                onTap: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                tr('serverList'),
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.2,
@@ -950,7 +1179,7 @@ class _ServerListPageState extends State<ServerListPage> {
                     decoration: const InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
-                      hintText: 'Server suchen',
+                      hintText: tr('search'),
                     ),
                   ),
                 ),
@@ -992,7 +1221,7 @@ class _ServerListPageState extends State<ServerListPage> {
               children: [
                 Expanded(
                   child: Pill(
-                    text: 'Leere ausblenden',
+                    text: tr('hideEmpty'),
                     active: _hideEmpty,
                     onTap: () => setState(() => _hideEmpty = !_hideEmpty),
                   ),
@@ -1000,42 +1229,16 @@ class _ServerListPageState extends State<ServerListPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Pill(
-                    text: 'Volle ausblenden',
+                    text: tr('hideFull'),
                     active: _hideFull,
                     onTap: () => setState(() => _hideFull = !_hideFull),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(kRadius),
-                color: Colors.white.withValues(alpha: 0.04),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.extension_outlined, size: 16, color: Colors.white.withValues(alpha: 0.5)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: TextField(
-                      controller: _scriptCtrl,
-                      style: const TextStyle(fontSize: 13),
-                      decoration: const InputDecoration(
-                        isDense: true,
-                        border: InputBorder.none,
-                        hintText: 'Script / Resource suchen',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
             if (countries.isNotEmpty) ...[
               const SizedBox(height: 12),
-              _sectionLabel('Land'),
+              _sectionLabel(tr('country')),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -1054,7 +1257,7 @@ class _ServerListPageState extends State<ServerListPage> {
             ],
             if (tags.isNotEmpty) ...[
               const SizedBox(height: 12),
-              _sectionLabel('Tags (1x einschließen, 2x ausschließen)'),
+              _sectionLabel(tr('tagsHint')),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -1094,7 +1297,7 @@ class _ServerListPageState extends State<ServerListPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: kAccent, strokeWidth: 2.4),
+            CircularProgressIndicator(color: kAccent, strokeWidth: 2.4),
             const SizedBox(height: 14),
             Text(
               'Lade komplette Serverliste…\ndas kann bis zu 30 Sekunden dauern',
@@ -1125,7 +1328,7 @@ class _ServerListPageState extends State<ServerListPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                 child: InkWell(
                   onTap: _load,
-                  child: const Text('Erneut versuchen', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  child: Text(tr('retry'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -1136,7 +1339,7 @@ class _ServerListPageState extends State<ServerListPage> {
     if (filtered.isEmpty) {
       return Center(
         child: Text(
-          'Keine Server gefunden.',
+          tr('noServersFound'),
           style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
         ),
       );
@@ -1175,8 +1378,6 @@ class ServerTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _ServerIcon(server: server, size: 52),
-            const SizedBox(width: 10),
-            _BoostBadge(power: server.upvotePower),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -1224,6 +1425,8 @@ class ServerTile extends StatelessWidget {
                   '${server.clients}/${server.svMaxclients}',
                   style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                 ),
+                const SizedBox(height: 4),
+                _BoostBadge(power: server.upvotePower),
               ],
             ),
           ],
@@ -1249,10 +1452,10 @@ class _BoostBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.keyboard_arrow_up, size: 15, color: kAccent),
+          Icon(Icons.keyboard_arrow_up, size: 15, color: kAccent),
           Text(
             '$power',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: kAccent),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: kAccent),
           ),
         ],
       ),
@@ -1355,7 +1558,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
         behavior: SnackBarBehavior.floating,
         backgroundColor: kSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadius)),
-        content: Text('Kopiert: ${_server.joinUrl}', style: const TextStyle(fontSize: 13)),
+        content: Text('${tr('copied')}: ${_server.joinUrl}', style: const TextStyle(fontSize: 13)),
       ),
     );
   }
@@ -1373,6 +1576,18 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
               expandedHeight: 200,
               backgroundColor: kBg,
               leading: const BackButton(),
+              actions: [
+                IconButton(
+                  onPressed: () async {
+                    await AppState.I.toggleFavorite(s.code);
+                    if (mounted) setState(() {});
+                  },
+                  icon: Icon(
+                    AppState.I.isFavorite(s.code) ? Icons.star : Icons.star_border,
+                    color: AppState.I.isFavorite(s.code) ? const Color(0xFFE0B45A) : Colors.white,
+                  ),
+                ),
+              ],
               flexibleSpace: FlexibleSpaceBar(
                 background: _Banner(server: s),
               ),
@@ -1425,7 +1640,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                                   children: [
                                     Icon(Icons.content_copy, size: 15, color: kAccent),
                                     SizedBox(width: 6),
-                                    Text('Beitreten', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: kAccent)),
+                                    Text(tr('join'), style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: kAccent)),
                                   ],
                                 ),
                               ),
@@ -1460,8 +1675,8 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                   unselectedLabelColor: Colors.white.withValues(alpha: 0.4),
                   labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                   tabs: const [
-                    Tab(text: 'Übersicht'),
-                    Tab(text: 'Scripts'),
+                    Tab(text: tr('overview')),
+                    Tab(text: tr('scripts')),
                   ],
                 ),
               ),
@@ -1576,22 +1791,22 @@ class _OverviewTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _statRow('Gametype', s.gametype.isEmpty ? '—' : s.gametype),
+              _statRow(tr('gametype'), s.gametype.isEmpty ? '—' : s.gametype),
               _divider(),
-              _statRow('Map', s.mapname.isEmpty ? '—' : s.mapname),
+              _statRow(tr('map'), s.mapname.isEmpty ? '—' : s.mapname),
               _divider(),
-              _statRow('Spieler', '${s.clients} / ${s.svMaxclients}'),
+              _statRow(tr('players'), '${s.clients} / ${s.svMaxclients}'),
               _divider(),
-              _statRow('Boost', '${s.upvotePower}'),
+              _statRow(tr('boost'), '${s.upvotePower}'),
               _divider(),
-              _statRow('OneSync', s.vars.onesyncEnabled ? 'Aktiv' : 'Inaktiv'),
+              _statRow(tr('onesync'), s.vars.onesyncEnabled ? tr('active') : tr('inactive')),
               if (s.vars.enforceGameBuild != null) ...[
                 _divider(),
-                _statRow('Build', s.vars.enforceGameBuild!),
+                _statRow(tr('build'), s.vars.enforceGameBuild!),
               ],
               if (s.vars.locale != null) ...[
                 _divider(),
-                _statRow('Sprache', s.vars.locale!),
+                _statRow(tr('language'), s.vars.locale!),
               ],
             ],
           ),
@@ -1602,7 +1817,7 @@ class _OverviewTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('TAGS', style: TextStyle(fontSize: 10.5, letterSpacing: 0.6, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.4))),
+                Text(tr('tags').toUpperCase(), style: TextStyle(fontSize: 10.5, letterSpacing: 0.6, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.4))),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
@@ -1692,7 +1907,7 @@ class _ScriptsTab extends StatelessWidget {
                     decoration: const InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
-                      hintText: 'Script filtern',
+                      hintText: tr('filterScripts'),
                     ),
                   ),
                 ),
@@ -1704,7 +1919,7 @@ class _ScriptsTab extends StatelessWidget {
         Expanded(
           child: filtered.isEmpty
               ? Center(
-                  child: Text('Keine Scripts gefunden.', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13)),
+                  child: Text(tr('noScriptsFound'), style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13)),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -1727,6 +1942,606 @@ class _ScriptsTab extends StatelessWidget {
                 ),
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding
+// ---------------------------------------------------------------------------
+
+class OnboardingPage extends StatefulWidget {
+  const OnboardingPage({super.key});
+
+  @override
+  State<OnboardingPage> createState() => _OnboardingPageState();
+}
+
+class _OnboardingPageState extends State<OnboardingPage> {
+  int _step = 0;
+
+  void _selectLanguage(String lang) {
+    AppState.I.setLanguage(lang);
+    setState(() {});
+  }
+
+  void _selectTheme(String key) {
+    AppState.I.setThemeKey(key);
+    setState(() {});
+  }
+
+  void _onContinue() {
+    if (_step == 0) {
+      setState(() => _step = 1);
+    } else {
+      AppState.I.completeOnboarding();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBg,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Spacer(),
+              Icon(Icons.dns, size: 46, color: kAccent),
+              const SizedBox(height: 18),
+              Text(
+                tr('onboardingWelcome'),
+                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _step == 0 ? tr('onboardingLanguage') : tr('onboardingTheme'),
+                style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.55)),
+              ),
+              const SizedBox(height: 28),
+              if (_step == 0) _buildLanguageStep() else _buildThemeStep(),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(kRadius),
+                  onTap: _onContinue,
+                  child: GlassPanel(
+                    opacity: 0.14,
+                    borderOpacity: 0.4,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Center(
+                      child: Text(
+                        _step == 0 ? tr('continueLabel') : tr('getStarted'),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: kAccent),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageStep() {
+    return Column(
+      children: [
+        _optionTile('Deutsch', AppState.I.language == 'de', () => _selectLanguage('de')),
+        const SizedBox(height: 10),
+        _optionTile('English', AppState.I.language == 'en', () => _selectLanguage('en')),
+      ],
+    );
+  }
+
+  Widget _buildThemeStep() {
+    return Column(
+      children: kThemeOptions.map((t) {
+        final label = AppState.I.language == 'de' ? t.labelDe : t.labelEn;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _optionTile(
+            label,
+            AppState.I.themeKey == t.key,
+            () => _selectTheme(t.key),
+            swatch: t.accent,
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _optionTile(String label, bool active, VoidCallback onTap, {Color? swatch}) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(kRadius),
+      onTap: onTap,
+      child: GlassPanel(
+        opacity: active ? 0.14 : 0.05,
+        borderOpacity: active ? 0.5 : 0.10,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        child: Row(
+          children: [
+            if (swatch != null) ...[
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(color: swatch, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Text(label, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
+            ),
+            if (active) Icon(Icons.check_circle, size: 18, color: kAccent),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main menu
+// ---------------------------------------------------------------------------
+
+class MainMenuPage extends StatelessWidget {
+  const MainMenuPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AppState.I,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: kBg,
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr('appName'),
+                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+                  ),
+                  const SizedBox(height: 24),
+                  _MenuCard(
+                    icon: Icons.dns,
+                    title: tr('serverList'),
+                    subtitle: tr('serverListSubtitle'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ServerListPage()),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _MenuCard(
+                    icon: Icons.star,
+                    title: tr('favorites'),
+                    subtitle: tr('favoritesSubtitle'),
+                    badge: AppState.I.favorites.isEmpty ? null : '${AppState.I.favorites.length}',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const FavoritesPage()),
+                    ),
+                  ),
+                  const Spacer(),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(kRadius),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SettingsPage()),
+                      ),
+                      child: GlassPanel(
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(Icons.settings_outlined, size: 22, color: Colors.white.withValues(alpha: 0.85)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MenuCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? badge;
+  final VoidCallback onTap;
+
+  const _MenuCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.badge,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(kRadius),
+      onTap: onTap,
+      child: GlassPanel(
+        blur: 24,
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(kRadius),
+                color: kAccent.withValues(alpha: 0.12),
+                border: Border.all(color: kAccent.withValues(alpha: 0.3)),
+              ),
+              child: Icon(icon, size: 26, color: kAccent),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 3),
+                  Text(subtitle, style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.5))),
+                ],
+              ),
+            ),
+            if (badge != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(kRadius),
+                  color: kAccent.withValues(alpha: 0.14),
+                ),
+                child: Text(badge!, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kAccent)),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Icon(Icons.chevron_right, color: Colors.white.withValues(alpha: 0.35)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Favorites
+// ---------------------------------------------------------------------------
+
+class FavoritesPage extends StatefulWidget {
+  const FavoritesPage({super.key});
+
+  @override
+  State<FavoritesPage> createState() => _FavoritesPageState();
+}
+
+class _FavoritesPageState extends State<FavoritesPage> {
+  bool _loading = true;
+  String? _error;
+  List<GameServer> _favoriteServers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final servers = await ApiService.fetchTopServers();
+      final favorites = AppState.I.favorites;
+      final matched = servers.where((s) => favorites.contains(s.code)).toList();
+      matched.sort((a, b) => b.upvotePower.compareTo(a.upvotePower));
+      if (!mounted) return;
+      setState(() {
+        _favoriteServers = matched;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+              child: Row(
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(kRadius),
+                    onTap: () => Navigator.of(context).pop(),
+                    child: GlassPanel(
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(Icons.arrow_back, size: 18),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    tr('favorites'),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildBody()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (AppState.I.favorites.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            tr('noFavoritesYet'),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+          ),
+        ),
+      );
+    }
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2.4));
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.wifi_off, color: Colors.white.withValues(alpha: 0.35), size: 32),
+              const SizedBox(height: 10),
+              Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
+              const SizedBox(height: 14),
+              InkWell(
+                onTap: _load,
+                child: GlassPanel(
+                  opacity: 0.10,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  child: Text(tr('retry'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (_favoriteServers.isEmpty) {
+      return Center(
+        child: Text(tr('noFavoritesYet'), textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13)),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: kAccent,
+      backgroundColor: kSurface,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(14, 2, 14, 20),
+        itemCount: _favoriteServers.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) => ServerTile(server: _favoriteServers[index]),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBg,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+              child: Row(
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(kRadius),
+                    onTap: () => Navigator.of(context).pop(),
+                    child: GlassPanel(
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(Icons.arrow_back, size: 18),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    tr('settings'),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                children: [
+                  _sectionLabel(tr('appLanguage')),
+                  const SizedBox(height: 8),
+                  GlassPanel(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Pill(
+                            text: 'Deutsch',
+                            active: AppState.I.language == 'de',
+                            onTap: () {
+                              AppState.I.setLanguage('de');
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Pill(
+                            text: 'English',
+                            active: AppState.I.language == 'en',
+                            onTap: () {
+                              AppState.I.setLanguage('en');
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _sectionLabel(tr('colorScheme')),
+                  const SizedBox(height: 8),
+                  GlassPanel(
+                    child: Column(
+                      children: kThemeOptions.map((t) {
+                        final label = AppState.I.language == 'de' ? t.labelDe : t.labelEn;
+                        final active = AppState.I.themeKey == t.key;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: InkWell(
+                            onTap: () {
+                              AppState.I.setThemeKey(t.key);
+                              setState(() {});
+                            },
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 16,
+                                  height: 16,
+                                  decoration: BoxDecoration(color: t.accent, shape: BoxShape.circle),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(child: Text(label, style: const TextStyle(fontSize: 13.5))),
+                                if (active) Icon(Icons.check_circle, size: 17, color: kAccent),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _sectionLabel(tr('notifications')),
+                  const SizedBox(height: 8),
+                  GlassPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(tr('notificationsDesc'), style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.75))),
+                            ),
+                            Switch(
+                              value: AppState.I.notificationsEnabled,
+                              activeColor: kAccent,
+                              onChanged: (v) {
+                                AppState.I.setNotificationsEnabled(v);
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                        if (AppState.I.notificationsEnabled) ...[
+                          Divider(height: 20, color: Colors.white.withValues(alpha: 0.06)),
+                          Text(tr('notificationThreshold'), style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.5))),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              _stepperButton(Icons.remove, () {
+                                final v = (AppState.I.notificationThreshold - 5).clamp(1, 9999);
+                                AppState.I.setNotificationThreshold(v);
+                                setState(() {});
+                              }),
+                              Expanded(
+                                child: Center(
+                                  child: Text(
+                                    '${AppState.I.notificationThreshold}',
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                              ),
+                              _stepperButton(Icons.add, () {
+                                final v = (AppState.I.notificationThreshold + 5).clamp(1, 9999);
+                                AppState.I.setNotificationThreshold(v);
+                                setState(() {});
+                              }),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stepperButton(IconData icon, VoidCallback onTap) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(kRadius),
+      onTap: onTap,
+      child: GlassPanel(
+        opacity: 0.08,
+        padding: const EdgeInsets.all(10),
+        child: Icon(icon, size: 18, color: kAccent),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: TextStyle(
+        fontSize: 10.5,
+        letterSpacing: 0.6,
+        fontWeight: FontWeight.w600,
+        color: Colors.white.withValues(alpha: 0.4),
+      ),
     );
   }
 }
