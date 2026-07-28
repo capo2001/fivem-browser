@@ -11,12 +11,23 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:share_plus/share_plus.dart';
 
-const Color kBg = Color(0xFF070A0F);
-const Color kSurface = Color(0xFF10141C);
+const Color _kDarkBg = Color(0xFF070A0F);
+const Color _kDarkSurface = Color(0xFF10141C);
+const Color _kLightBg = Color(0xFFF3F4F6);
+const Color _kLightSurface = Color(0xFFFFFFFF);
+const Color _kLightFg = Color(0xFF14171C);
 const double kRadius = 5;
+const String kAppVersion = '1.1.0';
 
 Color get kAccent => AppState.I.accentColor;
+Color get kBg => AppState.I.currentTheme.bg;
+Color get kSurface => AppState.I.currentTheme.surface;
+// Foreground (text/icon) color - flips from white to near-black in the
+// light theme. Not used for controls overlaid on server banner images
+// (those stay a fixed white, matching photo-overlay conventions).
+Color get kFg => AppState.I.currentTheme.isDark ? Colors.white : _kLightFg;
 
 const String kFavoriteCheckTask = 'favoriteCheckTask';
 
@@ -26,16 +37,37 @@ const String kFavoriteCheckTask = 'favoriteCheckTask';
 
 class AppThemeOption {
   final String key;
-  final String labelDe;
-  final String labelEn;
+  final String labelKey;
   final Color accent;
-  const AppThemeOption(this.key, this.labelDe, this.labelEn, this.accent);
+  final Color bg;
+  final Color surface;
+  final bool isDark;
+  const AppThemeOption(
+    this.key,
+    this.labelKey,
+    this.accent, {
+    this.bg = _kDarkBg,
+    this.surface = _kDarkSurface,
+    this.isDark = true,
+  });
 }
 
 const List<AppThemeOption> kThemeOptions = [
-  AppThemeOption('silver', 'Silber', 'Silver', Color(0xFFD4D8DF)),
-  AppThemeOption('blue', 'Blau', 'Blue', Color(0xFF4C8DFF)),
-  AppThemeOption('gold', 'Gold', 'Gold', Color(0xFFE0B45A)),
+  AppThemeOption('silver', 'themeSilver', Color(0xFFD4D8DF)),
+  AppThemeOption('blue', 'themeBlue', Color(0xFF4C8DFF)),
+  AppThemeOption('gold', 'themeGold', Color(0xFFE0B45A)),
+  AppThemeOption('red', 'themeRed', Color(0xFFE5484D)),
+  AppThemeOption('green', 'themeGreen', Color(0xFF4ADE80)),
+  AppThemeOption('purple', 'themePurple', Color(0xFFB794F6)),
+  AppThemeOption('orange', 'themeOrange', Color(0xFFFF8A3D)),
+  AppThemeOption(
+    'light',
+    'themeLight',
+    Color(0xFF3D6FDB),
+    bg: _kLightBg,
+    surface: _kLightSurface,
+    isDark: false,
+  ),
 ];
 
 AppThemeOption themeByKey(String key) =>
@@ -46,53 +78,81 @@ AppThemeOption themeByKey(String key) =>
 // ---------------------------------------------------------------------------
 
 const Map<String, Map<String, String>> _strings = {
-  'appName': {'de': 'Fserver', 'en': 'Fserver'},
-  'serverList': {'de': 'Serverliste', 'en': 'Server list'},
-  'favorites': {'de': 'Favoriten', 'en': 'Favorites'},
-  'favoritesSubtitle': {'de': 'Deine gespeicherten Server', 'en': 'Your saved servers'},
-  'serverListSubtitle': {'de': 'Alle Server durchsuchen', 'en': 'Browse all servers'},
-  'settings': {'de': 'Einstellungen', 'en': 'Settings'},
-  'search': {'de': 'Server suchen', 'en': 'Search servers'},
-  'retry': {'de': 'Erneut versuchen', 'en': 'Retry'},
-  'noServersFound': {'de': 'Keine Server gefunden.', 'en': 'No servers found.'},
-  'noFavoritesYet': {'de': 'Noch keine Favoriten. Tippe auf den Stern in einem Serverprofil.', 'en': 'No favorites yet. Tap the star on a server profile.'},
-  'loading': {'de': 'Lade komplette Serverliste…\ndas kann bis zu 30 Sekunden dauern', 'en': 'Loading full server list…\nthis can take up to 30 seconds'},
-  'hideEmpty': {'de': 'Leere ausblenden', 'en': 'Hide empty'},
-  'hideFull': {'de': 'Volle ausblenden', 'en': 'Hide full'},
-  'country': {'de': 'Land', 'en': 'Country'},
-  'tagsHint': {'de': 'Tags (1x einschließen, 2x ausschließen)', 'en': 'Tags (tap once to include, twice to exclude)'},
-  'join': {'de': 'Beitreten', 'en': 'Join'},
-  'copied': {'de': 'Kopiert', 'en': 'Copied'},
-  'overview': {'de': 'Übersicht', 'en': 'Overview'},
-  'scripts': {'de': 'Scripts', 'en': 'Scripts'},
-  'filterScripts': {'de': 'Script filtern', 'en': 'Filter scripts'},
-  'noScriptsFound': {'de': 'Keine Scripts gefunden.', 'en': 'No scripts found.'},
-  'gametype': {'de': 'Gametype', 'en': 'Gametype'},
-  'map': {'de': 'Map', 'en': 'Map'},
-  'players': {'de': 'Spieler', 'en': 'Players'},
-  'boost': {'de': 'Boost', 'en': 'Boost'},
-  'onesync': {'de': 'OneSync', 'en': 'OneSync'},
-  'active': {'de': 'Aktiv', 'en': 'Active'},
-  'inactive': {'de': 'Inaktiv', 'en': 'Inactive'},
-  'build': {'de': 'Build', 'en': 'Build'},
-  'language': {'de': 'Sprache', 'en': 'Language'},
-  'tags': {'de': 'Tags', 'en': 'Tags'},
-  'onboardingWelcome': {'de': 'Willkommen', 'en': 'Welcome'},
-  'onboardingLanguage': {'de': 'Wähle deine Sprache', 'en': 'Choose your language'},
-  'onboardingTheme': {'de': 'Wähle dein Farbschema', 'en': 'Choose your color scheme'},
-  'continueLabel': {'de': 'Weiter', 'en': 'Continue'},
-  'getStarted': {'de': 'Los geht\'s', 'en': 'Get started'},
-  'appLanguage': {'de': 'App-Sprache', 'en': 'App language'},
-  'colorScheme': {'de': 'Farbschema', 'en': 'Color scheme'},
-  'notifications': {'de': 'Benachrichtigungen', 'en': 'Notifications'},
-  'notificationsDesc': {'de': 'Benachrichtigung senden, wenn ein favorisierter Server genug Spieler hat', 'en': 'Notify me when a favorite server has enough players'},
-  'notificationThreshold': {'de': 'Ab wie vielen Spielern benachrichtigen', 'en': 'Notify from this many players'},
-  'back': {'de': 'Zurück', 'en': 'Back'},
+  'appName': {'de': 'Fserver', 'en': 'Fserver', 'fr': 'Fserver', 'es': 'Fserver', 'pl': 'Fserver'},
+  'serverList': {'de': 'Serverliste', 'en': 'Server list', 'fr': 'Liste des serveurs', 'es': 'Lista de servidores', 'pl': 'Lista serwerów'},
+  'favorites': {'de': 'Favoriten', 'en': 'Favorites', 'fr': 'Favoris', 'es': 'Favoritos', 'pl': 'Ulubione'},
+  'favoritesSubtitle': {'de': 'Deine gespeicherten Server', 'en': 'Your saved servers', 'fr': 'Vos serveurs enregistrés', 'es': 'Tus servidores guardados', 'pl': 'Twoje zapisane serwery'},
+  'serverListSubtitle': {'de': 'Alle Server durchsuchen', 'en': 'Browse all servers', 'fr': 'Parcourir tous les serveurs', 'es': 'Explorar todos los servidores', 'pl': 'Przeglądaj wszystkie serwery'},
+  'settings': {'de': 'Einstellungen', 'en': 'Settings', 'fr': 'Paramètres', 'es': 'Ajustes', 'pl': 'Ustawienia'},
+  'search': {'de': 'Server suchen', 'en': 'Search servers', 'fr': 'Rechercher un serveur', 'es': 'Buscar servidores', 'pl': 'Szukaj serwerów'},
+  'retry': {'de': 'Erneut versuchen', 'en': 'Retry', 'fr': 'Réessayer', 'es': 'Reintentar', 'pl': 'Spróbuj ponownie'},
+  'noServersFound': {'de': 'Keine Server gefunden.', 'en': 'No servers found.', 'fr': 'Aucun serveur trouvé.', 'es': 'No se encontraron servidores.', 'pl': 'Nie znaleziono serwerów.'},
+  'noFavoritesYet': {'de': 'Noch keine Favoriten. Tippe auf den Stern in einem Serverprofil.', 'en': 'No favorites yet. Tap the star on a server profile.', 'fr': "Pas encore de favoris. Appuyez sur l'étoile dans le profil d'un serveur.", 'es': 'Aún no hay favoritos. Toca la estrella en el perfil de un servidor.', 'pl': 'Brak ulubionych. Stuknij gwiazdkę w profilu serwera.'},
+  'loading': {'de': 'Lade komplette Serverliste…\ndas kann bis zu 30 Sekunden dauern', 'en': 'Loading full server list…\nthis can take up to 30 seconds', 'fr': 'Chargement de la liste complète des serveurs…\ncela peut prendre jusqu\'à 30 secondes', 'es': 'Cargando la lista completa de servidores…\npuede tardar hasta 30 segundos', 'pl': 'Ładowanie pełnej listy serwerów…\nmoże to potrwać do 30 sekund'},
+  'hideEmpty': {'de': 'Leere ausblenden', 'en': 'Hide empty', 'fr': 'Masquer les vides', 'es': 'Ocultar vacíos', 'pl': 'Ukryj puste'},
+  'hideFull': {'de': 'Volle ausblenden', 'en': 'Hide full', 'fr': 'Masquer les pleins', 'es': 'Ocultar llenos', 'pl': 'Ukryj pełne'},
+  'country': {'de': 'Land', 'en': 'Country', 'fr': 'Pays', 'es': 'País', 'pl': 'Kraj'},
+  'tagsHint': {'de': 'Tags (1x einschließen, 2x ausschließen)', 'en': 'Tags (tap once to include, twice to exclude)', 'fr': 'Tags (appuyez une fois pour inclure, deux fois pour exclure)', 'es': 'Etiquetas (toca una vez para incluir, dos para excluir)', 'pl': 'Tagi (dotknij raz, aby uwzględnić, dwa razy, aby wykluczyć)'},
+  'join': {'de': 'Beitreten', 'en': 'Join', 'fr': 'Rejoindre', 'es': 'Unirse', 'pl': 'Dołącz'},
+  'copied': {'de': 'Kopiert', 'en': 'Copied', 'fr': 'Copié', 'es': 'Copiado', 'pl': 'Skopiowano'},
+  'overview': {'de': 'Übersicht', 'en': 'Overview', 'fr': 'Aperçu', 'es': 'Resumen', 'pl': 'Przegląd'},
+  'scripts': {'de': 'Scripts', 'en': 'Scripts', 'fr': 'Scripts', 'es': 'Scripts', 'pl': 'Skrypty'},
+  'filterScripts': {'de': 'Script filtern', 'en': 'Filter scripts', 'fr': 'Filtrer les scripts', 'es': 'Filtrar scripts', 'pl': 'Filtruj skrypty'},
+  'noScriptsFound': {'de': 'Keine Scripts gefunden.', 'en': 'No scripts found.', 'fr': 'Aucun script trouvé.', 'es': 'No se encontraron scripts.', 'pl': 'Nie znaleziono skryptów.'},
+  'gametype': {'de': 'Gametype', 'en': 'Gametype', 'fr': 'Type de jeu', 'es': 'Tipo de juego', 'pl': 'Typ gry'},
+  'map': {'de': 'Map', 'en': 'Map', 'fr': 'Carte', 'es': 'Mapa', 'pl': 'Mapa'},
+  'players': {'de': 'Spieler', 'en': 'Players', 'fr': 'Joueurs', 'es': 'Jugadores', 'pl': 'Gracze'},
+  'boost': {'de': 'Boost', 'en': 'Boost', 'fr': 'Boost', 'es': 'Boost', 'pl': 'Boost'},
+  'onesync': {'de': 'OneSync', 'en': 'OneSync', 'fr': 'OneSync', 'es': 'OneSync', 'pl': 'OneSync'},
+  'active': {'de': 'Aktiv', 'en': 'Active', 'fr': 'Actif', 'es': 'Activo', 'pl': 'Aktywny'},
+  'inactive': {'de': 'Inaktiv', 'en': 'Inactive', 'fr': 'Inactif', 'es': 'Inactivo', 'pl': 'Nieaktywny'},
+  'build': {'de': 'Build', 'en': 'Build', 'fr': 'Build', 'es': 'Build', 'pl': 'Build'},
+  'language': {'de': 'Sprache', 'en': 'Language', 'fr': 'Langue', 'es': 'Idioma', 'pl': 'Język'},
+  'tags': {'de': 'Tags', 'en': 'Tags', 'fr': 'Tags', 'es': 'Etiquetas', 'pl': 'Tagi'},
+  'onboardingWelcome': {'de': 'Willkommen', 'en': 'Welcome', 'fr': 'Bienvenue', 'es': 'Bienvenido', 'pl': 'Witamy'},
+  'onboardingLanguage': {'de': 'Wähle deine Sprache', 'en': 'Choose your language', 'fr': 'Choisissez votre langue', 'es': 'Elige tu idioma', 'pl': 'Wybierz swój język'},
+  'onboardingTheme': {'de': 'Wähle dein Farbschema', 'en': 'Choose your color scheme', 'fr': 'Choisissez votre thème de couleur', 'es': 'Elige tu esquema de color', 'pl': 'Wybierz swój schemat kolorów'},
+  'continueLabel': {'de': 'Weiter', 'en': 'Continue', 'fr': 'Continuer', 'es': 'Continuar', 'pl': 'Dalej'},
+  'getStarted': {'de': 'Los geht\'s', 'en': 'Get started', 'fr': 'Commencer', 'es': 'Comenzar', 'pl': 'Zaczynajmy'},
+  'appLanguage': {'de': 'App-Sprache', 'en': 'App language', 'fr': "Langue de l'app", 'es': 'Idioma de la app', 'pl': 'Język aplikacji'},
+  'colorScheme': {'de': 'Farbschema', 'en': 'Color scheme', 'fr': 'Thème de couleur', 'es': 'Esquema de color', 'pl': 'Schemat kolorów'},
+  'notifications': {'de': 'Benachrichtigungen', 'en': 'Notifications', 'fr': 'Notifications', 'es': 'Notificaciones', 'pl': 'Powiadomienia'},
+  'notificationsDesc': {'de': 'Benachrichtigung senden, wenn ein favorisierter Server genug Spieler hat', 'en': 'Notify me when a favorite server has enough players', 'fr': "M'avertir quand un serveur favori a assez de joueurs", 'es': 'Avisarme cuando un servidor favorito tenga suficientes jugadores', 'pl': 'Powiadom mnie, gdy ulubiony serwer ma wystarczająco graczy'},
+  'notificationThreshold': {'de': 'Ab wie vielen Spielern benachrichtigen', 'en': 'Notify from this many players', 'fr': 'Notifier à partir de ce nombre de joueurs', 'es': 'Notificar a partir de esta cantidad de jugadores', 'pl': 'Powiadamiaj od tylu graczy'},
+  'back': {'de': 'Zurück', 'en': 'Back', 'fr': 'Retour', 'es': 'Atrás', 'pl': 'Wstecz'},
+  'themeSilver': {'de': 'Silber', 'en': 'Silver', 'fr': 'Argent', 'es': 'Plata', 'pl': 'Srebrny'},
+  'themeBlue': {'de': 'Blau', 'en': 'Blue', 'fr': 'Bleu', 'es': 'Azul', 'pl': 'Niebieski'},
+  'themeGold': {'de': 'Gold', 'en': 'Gold', 'fr': 'Or', 'es': 'Oro', 'pl': 'Złoty'},
+  'themeRed': {'de': 'Rot', 'en': 'Red', 'fr': 'Rouge', 'es': 'Rojo', 'pl': 'Czerwony'},
+  'themeGreen': {'de': 'Grün', 'en': 'Green', 'fr': 'Vert', 'es': 'Verde', 'pl': 'Zielony'},
+  'themePurple': {'de': 'Lila', 'en': 'Purple', 'fr': 'Violet', 'es': 'Morado', 'pl': 'Fioletowy'},
+  'themeOrange': {'de': 'Orange', 'en': 'Orange', 'fr': 'Orange', 'es': 'Naranja', 'pl': 'Pomarańczowy'},
+  'themeLight': {'de': 'Hell', 'en': 'Light', 'fr': 'Clair', 'es': 'Claro', 'pl': 'Jasny'},
+  'sortBy': {'de': 'Sortierung', 'en': 'Sort by', 'fr': 'Trier par', 'es': 'Ordenar por', 'pl': 'Sortowanie'},
+  'sortDefault': {'de': 'Standard', 'en': 'Default', 'fr': 'Par défaut', 'es': 'Predeterminado', 'pl': 'Domyślne'},
+  'sortMostPlayers': {'de': 'Meiste Spieler', 'en': 'Most players', 'fr': 'Plus de joueurs', 'es': 'Más jugadores', 'pl': 'Najwięcej graczy'},
+  'sortMostBoost': {'de': 'Höchster Boost', 'en': 'Highest boost', 'fr': 'Boost le plus élevé', 'es': 'Más boost', 'pl': 'Najwyższy boost'},
+  'playerRange': {'de': 'Spieleranzahl', 'en': 'Player count', 'fr': 'Nombre de joueurs', 'es': 'Número de jugadores', 'pl': 'Liczba graczy'},
+  'share': {'de': 'Teilen', 'en': 'Share', 'fr': 'Partager', 'es': 'Compartir', 'pl': 'Udostępnij'},
+  'vibration': {'de': 'Vibration', 'en': 'Vibration', 'fr': 'Vibration', 'es': 'Vibración', 'pl': 'Wibracje'},
+  'vibrationDesc': {'de': 'Bei Benachrichtigung vibrieren', 'en': 'Vibrate on notification', 'fr': 'Vibrer lors d\'une notification', 'es': 'Vibrar con la notificación', 'pl': 'Wibruj przy powiadomieniu'},
+  'about': {'de': 'Über die App', 'en': 'About', 'fr': 'À propos', 'es': 'Acerca de', 'pl': 'O aplikacji'},
+  'aboutVersion': {'de': 'Version', 'en': 'Version', 'fr': 'Version', 'es': 'Versión', 'pl': 'Wersja'},
+  'aboutCredits': {'de': 'Entwickelt für die FiveM-Community.', 'en': 'Built for the FiveM community.', 'fr': 'Conçu pour la communauté FiveM.', 'es': 'Creado para la comunidad de FiveM.', 'pl': 'Stworzone dla społeczności FiveM.'},
+  'aboutContact': {'de': 'Fehler gefunden? Melde dich gerne beim Entwickler.', 'en': 'Found a bug? Feel free to reach out to the developer.', 'fr': "Un bug ? N'hésitez pas à contacter le développeur.", 'es': '¿Encontraste un error? No dudes en contactar al desarrollador.', 'pl': 'Znalazłeś błąd? Skontaktuj się z deweloperem.'},
+};
+
+const Map<String, String> kLanguageNames = {
+  'de': 'Deutsch',
+  'en': 'English',
+  'fr': 'Français',
+  'es': 'Español',
+  'pl': 'Polski',
 };
 
 String tr(String key) {
   final lang = AppState.I.language;
-  return _strings[key]?[lang] ?? _strings[key]?['de'] ?? key;
+  return _strings[key]?[lang] ?? _strings[key]?['en'] ?? _strings[key]?['de'] ?? key;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,17 +166,27 @@ class AppState extends ChangeNotifier {
   String language = 'de';
   String themeKey = 'silver';
   bool notificationsEnabled = false;
+  bool notificationVibration = true;
   int notificationThreshold = 10;
   Set<String> favorites = {};
   bool onboardingDone = false;
 
   Color get accentColor => themeByKey(themeKey).accent;
+  AppThemeOption get currentTheme => themeByKey(themeKey);
+
+  // Only used to pick a sensible default before the user has explicitly
+  // chosen a language (i.e. on first launch, before onboarding).
+  static String _detectDeviceLanguage() {
+    final code = PlatformDispatcher.instance.locale.languageCode.toLowerCase();
+    return kLanguageNames.containsKey(code) ? code : 'de';
+  }
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    language = prefs.getString('language') ?? 'de';
+    language = prefs.getString('language') ?? _detectDeviceLanguage();
     themeKey = prefs.getString('themeKey') ?? 'silver';
     notificationsEnabled = prefs.getBool('notificationsEnabled') ?? false;
+    notificationVibration = prefs.getBool('notificationVibration') ?? true;
     notificationThreshold = prefs.getInt('notificationThreshold') ?? 10;
     favorites = (prefs.getStringList('favorites') ?? const []).toSet();
     onboardingDone = prefs.getBool('onboardingDone') ?? false;
@@ -127,6 +197,7 @@ class AppState extends ChangeNotifier {
     await prefs.setString('language', language);
     await prefs.setString('themeKey', themeKey);
     await prefs.setBool('notificationsEnabled', notificationsEnabled);
+    await prefs.setBool('notificationVibration', notificationVibration);
     await prefs.setInt('notificationThreshold', notificationThreshold);
     await prefs.setStringList('favorites', favorites.toList());
     await prefs.setBool('onboardingDone', onboardingDone);
@@ -156,6 +227,12 @@ class AppState extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> setNotificationVibration(bool value) async {
+    notificationVibration = value;
+    notifyListeners();
+    await _persist();
+  }
+
   Future<void> completeOnboarding() async {
     onboardingDone = true;
     notifyListeners();
@@ -175,14 +252,15 @@ class AppState extends ChangeNotifier {
 // Background favorite-player-count check + local notifications
 // ---------------------------------------------------------------------------
 
-Future<void> _showFavoriteNotification(FlutterLocalNotificationsPlugin plugin, int id, String hostname, int clients) async {
-  const details = NotificationDetails(
+Future<void> _showFavoriteNotification(FlutterLocalNotificationsPlugin plugin, int id, String hostname, int clients, {bool vibration = true}) async {
+  final details = NotificationDetails(
     android: AndroidNotificationDetails(
       'favorite_server_channel',
       'Favoriten-Benachrichtigungen',
       channelDescription: 'Benachrichtigungen für favorisierte Server',
       importance: Importance.high,
       priority: Priority.high,
+      enableVibration: vibration,
     ),
   );
   await plugin.show(id, hostname, 'hat gerade $clients Spieler', details);
@@ -197,6 +275,7 @@ void callbackDispatcher() {
       final favorites = prefs.getStringList('favorites') ?? const [];
       if (!enabled || favorites.isEmpty) return true;
       final threshold = prefs.getInt('notificationThreshold') ?? 10;
+      final vibration = prefs.getBool('notificationVibration') ?? true;
 
       final plugin = FlutterLocalNotificationsPlugin();
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -209,7 +288,7 @@ void callbackDispatcher() {
         final server = byCode[code];
         if (server == null) continue;
         if (server.clients >= threshold) {
-          await _showFavoriteNotification(plugin, notificationId++, server.hostname, server.clients);
+          await _showFavoriteNotification(plugin, notificationId++, server.hostname, server.clients, vibration: vibration);
         }
       }
     } catch (_) {
@@ -265,14 +344,17 @@ class FivemBrowserApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: AppState.I,
       builder: (context, _) {
-        final base = ThemeData.dark(useMaterial3: true);
+        final currentTheme = AppState.I.currentTheme;
+        final base = currentTheme.isDark
+            ? ThemeData.dark(useMaterial3: true)
+            : ThemeData.light(useMaterial3: true);
         return MaterialApp(
           title: 'Fserver',
           debugShowCheckedModeBanner: false,
           theme: base.copyWith(
             scaffoldBackgroundColor: kBg,
             colorScheme: base.colorScheme.copyWith(
-              brightness: Brightness.dark,
+              brightness: currentTheme.isDark ? Brightness.dark : Brightness.light,
               primary: kAccent,
               secondary: kAccent,
               surface: kSurface,
@@ -281,16 +363,19 @@ class FivemBrowserApp extends StatelessWidget {
               backgroundColor: Colors.transparent,
               elevation: 0,
               surfaceTintColor: Colors.transparent,
+              // Always white: this only styles the ServerDetailPage's back
+              // button, which sits on top of the server banner image, not
+              // the app's own theme-dependent background.
               foregroundColor: Colors.white,
             ),
             splashFactory: NoSplash.splashFactory,
             highlightColor: Colors.transparent,
             textTheme: base.textTheme.apply(
-              bodyColor: Colors.white.withValues(alpha: 0.92),
-              displayColor: Colors.white,
+              bodyColor: kFg.withValues(alpha: 0.92),
+              displayColor: kFg,
               fontSizeFactor: 0.93,
             ),
-            dividerColor: Colors.white.withValues(alpha: 0.08),
+            dividerColor: kFg.withValues(alpha: 0.08),
             useMaterial3: true,
           ),
           home: AppState.I.onboardingDone ? const MainMenuPage() : const OnboardingPage(),
@@ -506,6 +591,12 @@ class GameServer {
     'DE': {'DE', 'GER', 'GERMANY', 'DEUTSCHLAND', 'D', 'DA'},
     'IT': {'IT', 'ITA', 'ITALY', 'ITALIA'},
     'US': {'US', 'USA', 'EUA', 'AMERICA', 'UNITEDSTATES'},
+    'FR': {'FR', 'FRA', 'FRANCE', 'FRANCAIS', 'FRANÇAIS'},
+    'ES': {'ES', 'ESP', 'SPAIN', 'ESPANA', 'ESPAÑA', 'LATAM', 'LATINOAMERICA', 'LATINOAMÉRICA', 'MX', 'MEXICO', 'MÉXICO', 'AR', 'ARGENTINA'},
+    'PL': {'PL', 'POL', 'POLAND', 'POLSKA'},
+    'NL': {'NL', 'NLD', 'NETHERLANDS', 'HOLLAND', 'NEDERLAND'},
+    'PT': {'PT', 'PRT', 'PORTUGAL', 'BR', 'BRA', 'BRAZIL', 'BRASIL'},
+    'TR': {'TR', 'TUR', 'TURKEY', 'TURKIYE', 'TÜRKİYE'},
   };
 
   String? get countryGroup {
@@ -934,15 +1025,15 @@ class GlassPanel extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: borderRadius,
             border: Border.all(
-              color: Colors.white.withValues(alpha: borderOpacity),
+              color: kFg.withValues(alpha: borderOpacity),
               width: 1,
             ),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withValues(alpha: opacity + 0.03),
-                Colors.white.withValues(alpha: opacity * 0.3),
+                kFg.withValues(alpha: opacity + 0.03),
+                kFg.withValues(alpha: opacity * 0.3),
               ],
             ),
           ),
@@ -977,9 +1068,9 @@ class Pill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(kRadius),
-          color: active ? color.withValues(alpha: 0.18) : Colors.white.withValues(alpha: 0.05),
+          color: active ? color.withValues(alpha: 0.18) : kFg.withValues(alpha: 0.05),
           border: Border.all(
-            color: active ? color.withValues(alpha: 0.65) : Colors.white.withValues(alpha: 0.12),
+            color: active ? color.withValues(alpha: 0.65) : kFg.withValues(alpha: 0.12),
             width: 1,
           ),
         ),
@@ -988,7 +1079,7 @@ class Pill extends StatelessWidget {
           style: TextStyle(
             fontSize: 11,
             height: 1,
-            color: active ? Colors.white : Colors.white.withValues(alpha: 0.75),
+            color: active ? kFg : kFg.withValues(alpha: 0.75),
             fontWeight: active ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
@@ -1010,6 +1101,12 @@ class ServerListPage extends StatefulWidget {
   State<ServerListPage> createState() => _ServerListPageState();
 }
 
+enum SortMode { defaultOrder, mostPlayers, mostBoost }
+
+// Upper bound of the player-count range filter; the slider's top handle
+// means "no upper limit" rather than a hard cap at this value.
+const double kPlayerRangeMax = 256;
+
 class _ServerListPageState extends State<ServerListPage> {
   List<GameServer> _servers = [];
   List<String> _topTags = [];
@@ -1022,17 +1119,24 @@ class _ServerListPageState extends State<ServerListPage> {
   bool _hideFull = false;
   String? _selectedCountry;
   final Map<String, TagState> _tagStates = {};
+  SortMode _sortMode = SortMode.defaultOrder;
+  RangeValues _playerRange = const RangeValues(0, kPlayerRangeMax);
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
     _searchCtrl.addListener(() => setState(() {}));
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (!_loading) _load();
+    });
   }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _autoRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -1059,7 +1163,7 @@ class _ServerListPageState extends State<ServerListPage> {
 
   // Curated, fixed set rather than derived from data - `vars.locale` is
   // free text and produces dozens of near-duplicate junk values.
-  static const List<String> _availableCountries = ['DE', 'IT', 'US'];
+  static const List<String> _availableCountries = ['DE', 'IT', 'US', 'FR', 'ES', 'PL', 'NL', 'PT', 'TR'];
 
   // Computed once when the list loads (not on every rebuild - with 30k+
   // servers this was the main source of the filter panel's lag), and
@@ -1080,8 +1184,9 @@ class _ServerListPageState extends State<ServerListPage> {
     final query = _searchCtrl.text.trim().toLowerCase();
     final activeTagFilters =
         _tagStates.entries.where((e) => e.value != TagState.neutral).toList();
+    final noUpperPlayerBound = _playerRange.end >= kPlayerRangeMax;
 
-    return _servers.where((s) {
+    final result = _servers.where((s) {
       if (query.isNotEmpty && !s.hostname.toLowerCase().contains(query)) {
         return false;
       }
@@ -1092,6 +1197,8 @@ class _ServerListPageState extends State<ServerListPage> {
       if (_selectedCountry != null && s.countryGroup != _selectedCountry) {
         return false;
       }
+      if (s.clients < _playerRange.start) return false;
+      if (!noUpperPlayerBound && s.clients > _playerRange.end) return false;
       for (final entry in activeTagFilters) {
         final has = s.tagsLower.contains(entry.key);
         if (entry.value == TagState.include && !has) return false;
@@ -1099,6 +1206,18 @@ class _ServerListPageState extends State<ServerListPage> {
       }
       return true;
     }).toList();
+
+    switch (_sortMode) {
+      case SortMode.defaultOrder:
+        break;
+      case SortMode.mostPlayers:
+        result.sort((a, b) => b.clients.compareTo(a.clients));
+        break;
+      case SortMode.mostBoost:
+        result.sort((a, b) => b.upvotePower.compareTo(a.upvotePower));
+        break;
+    }
+    return result;
   }
 
   void _cycleTag(String tag) {
@@ -1161,7 +1280,7 @@ class _ServerListPageState extends State<ServerListPage> {
                 '$count',
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.45),
+                  color: kFg.withValues(alpha: 0.45),
                 ),
               ),
               const Spacer(),
@@ -1182,7 +1301,7 @@ class _ServerListPageState extends State<ServerListPage> {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
-                Icon(Icons.search, size: 18, color: Colors.white.withValues(alpha: 0.5)),
+                Icon(Icons.search, size: 18, color: kFg.withValues(alpha: 0.5)),
                 const SizedBox(width: 6),
                 Expanded(
                   child: TextField(
@@ -1198,7 +1317,7 @@ class _ServerListPageState extends State<ServerListPage> {
                 if (_searchCtrl.text.isNotEmpty)
                   InkWell(
                     onTap: () => _searchCtrl.clear(),
-                    child: Icon(Icons.close, size: 16, color: Colors.white.withValues(alpha: 0.5)),
+                    child: Icon(Icons.close, size: 16, color: kFg.withValues(alpha: 0.5)),
                   ),
               ],
             ),
@@ -1214,7 +1333,7 @@ class _ServerListPageState extends State<ServerListPage> {
       opacity: active ? 0.14 : 0.05,
       child: InkWell(
         onTap: onTap,
-        child: Icon(icon, size: 18, color: active ? kAccent : Colors.white.withValues(alpha: 0.8)),
+        child: Icon(icon, size: 18, color: active ? kAccent : kFg.withValues(alpha: 0.8)),
       ),
     );
   }
@@ -1247,6 +1366,58 @@ class _ServerListPageState extends State<ServerListPage> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            _sectionLabel(tr('sortBy')),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                Pill(
+                  text: tr('sortDefault'),
+                  active: _sortMode == SortMode.defaultOrder,
+                  onTap: () => setState(() => _sortMode = SortMode.defaultOrder),
+                ),
+                Pill(
+                  text: tr('sortMostPlayers'),
+                  active: _sortMode == SortMode.mostPlayers,
+                  onTap: () => setState(() => _sortMode = SortMode.mostPlayers),
+                ),
+                Pill(
+                  text: tr('sortMostBoost'),
+                  active: _sortMode == SortMode.mostBoost,
+                  onTap: () => setState(() => _sortMode = SortMode.mostBoost),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _sectionLabel(tr('playerRange'))),
+                Text(
+                  _playerRange.end >= kPlayerRangeMax
+                      ? '${_playerRange.start.round()}+'
+                      : '${_playerRange.start.round()}-${_playerRange.end.round()}',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: kAccent),
+                ),
+              ],
+            ),
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 2.5,
+                rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 7),
+                overlayShape: SliderComponentShape.noOverlay,
+              ),
+              child: RangeSlider(
+                values: _playerRange,
+                min: 0,
+                max: kPlayerRangeMax,
+                divisions: 32,
+                activeColor: kAccent,
+                inactiveColor: kFg.withValues(alpha: 0.12),
+                onChanged: (v) => setState(() => _playerRange = v),
+              ),
             ),
             if (countries.isNotEmpty) ...[
               const SizedBox(height: 12),
@@ -1298,7 +1469,7 @@ class _ServerListPageState extends State<ServerListPage> {
         fontSize: 10.5,
         letterSpacing: 0.6,
         fontWeight: FontWeight.w600,
-        color: Colors.white.withValues(alpha: 0.4),
+        color: kFg.withValues(alpha: 0.4),
       ),
     );
   }
@@ -1314,7 +1485,7 @@ class _ServerListPageState extends State<ServerListPage> {
             Text(
               'Lade komplette Serverliste…\ndas kann bis zu 30 Sekunden dauern',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.45)),
+              style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.45)),
             ),
           ],
         ),
@@ -1327,12 +1498,12 @@ class _ServerListPageState extends State<ServerListPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.wifi_off, color: Colors.white.withValues(alpha: 0.35), size: 36),
+              Icon(Icons.wifi_off, color: kFg.withValues(alpha: 0.35), size: 36),
               const SizedBox(height: 10),
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
+                style: TextStyle(color: kFg.withValues(alpha: 0.6), fontSize: 13),
               ),
               const SizedBox(height: 14),
               GlassPanel(
@@ -1352,7 +1523,7 @@ class _ServerListPageState extends State<ServerListPage> {
       return Center(
         child: Text(
           tr('noServersFound'),
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+          style: TextStyle(color: kFg.withValues(alpha: 0.4), fontSize: 13),
         ),
       );
     }
@@ -1409,7 +1580,7 @@ class ServerTile extends StatelessWidget {
                       children: server.vars.tags.take(3).map((t) {
                         return Text(
                           t,
-                          style: TextStyle(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.4)),
+                          style: TextStyle(fontSize: 10.5, color: kFg.withValues(alpha: 0.4)),
                         );
                       }).toList(),
                     ),
@@ -1424,11 +1595,11 @@ class ServerTile extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.public, size: 11, color: Colors.white.withValues(alpha: 0.35)),
+                      Icon(Icons.public, size: 11, color: kFg.withValues(alpha: 0.35)),
                       const SizedBox(width: 3),
                       Text(
                         server.countryGroup!,
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.45), letterSpacing: 0.4),
+                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: kFg.withValues(alpha: 0.45), letterSpacing: 0.4),
                       ),
                     ],
                   ),
@@ -1504,9 +1675,9 @@ class _ServerIcon extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(kRadius),
-        color: Colors.white.withValues(alpha: 0.05),
+        color: kFg.withValues(alpha: 0.05),
       ),
-      child: Icon(Icons.dns_outlined, size: size * 0.5, color: Colors.white.withValues(alpha: 0.3)),
+      child: Icon(Icons.dns_outlined, size: size * 0.5, color: kFg.withValues(alpha: 0.3)),
     );
   }
 }
@@ -1575,6 +1746,10 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
     );
   }
 
+  void _shareJoin() {
+    SharePlus.instance.share(ShareParams(text: '${_server.hostname}\n${_server.joinUrl}'));
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _server;
@@ -1596,6 +1771,8 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                   },
                   icon: Icon(
                     AppState.I.isFavorite(s.code) ? Icons.star : Icons.star_border,
+                    // Always gold/white (not theme-dependent): this icon
+                    // sits on top of the server banner image.
                     color: AppState.I.isFavorite(s.code) ? const Color(0xFFE0B45A) : Colors.white,
                   ),
                 ),
@@ -1627,7 +1804,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                                 const SizedBox(height: 2),
                                 Text(
                                   s.vars.projectName!,
-                                  style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.5)),
+                                  style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5)),
                                 ),
                               ],
                             ],
@@ -1669,6 +1846,15 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                             ],
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(kRadius),
+                          onTap: _shareJoin,
+                          child: GlassPanel(
+                            padding: const EdgeInsets.all(10),
+                            child: Icon(Icons.share_outlined, size: 17, color: kFg.withValues(alpha: 0.85)),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -1683,8 +1869,8 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                   controller: _tabController,
                   indicatorColor: kAccent,
                   indicatorWeight: 2,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white.withValues(alpha: 0.4),
+                  labelColor: kFg,
+                  unselectedLabelColor: kFg.withValues(alpha: 0.4),
                   labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                   tabs: [
                     Tab(text: tr('overview')),
@@ -1731,7 +1917,7 @@ class _Banner extends StatelessWidget {
           )
         else
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -1794,7 +1980,7 @@ class _OverviewTab extends StatelessWidget {
           GlassPanel(
             child: Text(
               s.vars.projectDesc!,
-              style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.75), height: 1.4),
+              style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75), height: 1.4),
             ),
           ),
           const SizedBox(height: 10),
@@ -1829,7 +2015,7 @@ class _OverviewTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tr('tags').toUpperCase(), style: TextStyle(fontSize: 10.5, letterSpacing: 0.6, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.4))),
+                Text(tr('tags').toUpperCase(), style: TextStyle(fontSize: 10.5, letterSpacing: 0.6, fontWeight: FontWeight.w600, color: kFg.withValues(alpha: 0.4))),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
@@ -1864,7 +2050,7 @@ class _OverviewTab extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.5))),
+            child: Text(label, style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5))),
           ),
           Text(value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
         ],
@@ -1880,7 +2066,7 @@ class _OverviewTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.45))),
+          Text(label, style: TextStyle(fontSize: 11.5, color: kFg.withValues(alpha: 0.45))),
           const SizedBox(height: 2),
           Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
         ],
@@ -1888,7 +2074,7 @@ class _OverviewTab extends StatelessWidget {
     );
   }
 
-  Widget _divider() => Divider(height: 1, color: Colors.white.withValues(alpha: 0.06));
+  Widget _divider() => Divider(height: 1, color: kFg.withValues(alpha: 0.06));
 }
 
 class _ScriptsTab extends StatelessWidget {
@@ -1910,7 +2096,7 @@ class _ScriptsTab extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
-                Icon(Icons.search, size: 16, color: Colors.white.withValues(alpha: 0.5)),
+                Icon(Icons.search, size: 16, color: kFg.withValues(alpha: 0.5)),
                 const SizedBox(width: 6),
                 Expanded(
                   child: TextField(
@@ -1923,7 +2109,7 @@ class _ScriptsTab extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text('${filtered.length}/${resources.length}', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.4))),
+                Text('${filtered.length}/${resources.length}', style: TextStyle(fontSize: 11, color: kFg.withValues(alpha: 0.4))),
               ],
             ),
           ),
@@ -1931,7 +2117,7 @@ class _ScriptsTab extends StatelessWidget {
         Expanded(
           child: filtered.isEmpty
               ? Center(
-                  child: Text(tr('noScriptsFound'), style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13)),
+                  child: Text(tr('noScriptsFound'), style: TextStyle(color: kFg.withValues(alpha: 0.4), fontSize: 13)),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -1942,7 +2128,7 @@ class _ScriptsTab extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                       child: Row(
                         children: [
-                          Icon(Icons.extension_outlined, size: 15, color: Colors.white.withValues(alpha: 0.4)),
+                          Icon(Icons.extension_outlined, size: 15, color: kFg.withValues(alpha: 0.4)),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(filtered[index], style: const TextStyle(fontSize: 12.5), maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -2010,7 +2196,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               const SizedBox(height: 6),
               Text(
                 _step == 0 ? tr('onboardingLanguage') : tr('onboardingTheme'),
-                style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.55)),
+                style: TextStyle(fontSize: 14, color: kFg.withValues(alpha: 0.55)),
               ),
               const SizedBox(height: 28),
               if (_step == 0) _buildLanguageStep() else _buildThemeStep(),
@@ -2041,11 +2227,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _buildLanguageStep() {
+    final codes = kLanguageNames.keys.toList();
     return Column(
       children: [
-        _optionTile('Deutsch', AppState.I.language == 'de', () => _selectLanguage('de')),
-        const SizedBox(height: 10),
-        _optionTile('English', AppState.I.language == 'en', () => _selectLanguage('en')),
+        for (var i = 0; i < codes.length; i++) ...[
+          if (i > 0) const SizedBox(height: 10),
+          _optionTile(kLanguageNames[codes[i]]!, AppState.I.language == codes[i], () => _selectLanguage(codes[i])),
+        ],
       ],
     );
   }
@@ -2053,7 +2241,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Widget _buildThemeStep() {
     return Column(
       children: kThemeOptions.map((t) {
-        final label = AppState.I.language == 'de' ? t.labelDe : t.labelEn;
+        final label = tr(t.labelKey);
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: _optionTile(
@@ -2149,7 +2337,7 @@ class MainMenuPage extends StatelessWidget {
                       ),
                       child: GlassPanel(
                         padding: const EdgeInsets.all(12),
-                        child: Icon(Icons.settings_outlined, size: 22, color: Colors.white.withValues(alpha: 0.85)),
+                        child: Icon(Icons.settings_outlined, size: 22, color: kFg.withValues(alpha: 0.85)),
                       ),
                     ),
                   ),
@@ -2205,7 +2393,7 @@ class _MenuCard extends StatelessWidget {
                 children: [
                   Text(title, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 3),
-                  Text(subtitle, style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.5))),
+                  Text(subtitle, style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5))),
                 ],
               ),
             ),
@@ -2220,7 +2408,7 @@ class _MenuCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
             ],
-            Icon(Icons.chevron_right, color: Colors.white.withValues(alpha: 0.35)),
+            Icon(Icons.chevron_right, color: kFg.withValues(alpha: 0.35)),
           ],
         ),
       ),
@@ -2316,7 +2504,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           child: Text(
             tr('noFavoritesYet'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+            style: TextStyle(color: kFg.withValues(alpha: 0.4), fontSize: 13),
           ),
         ),
       );
@@ -2331,9 +2519,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.wifi_off, color: Colors.white.withValues(alpha: 0.35), size: 32),
+              Icon(Icons.wifi_off, color: kFg.withValues(alpha: 0.35), size: 32),
               const SizedBox(height: 10),
-              Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
+              Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: kFg.withValues(alpha: 0.6), fontSize: 13)),
               const SizedBox(height: 14),
               InkWell(
                 onTap: _load,
@@ -2350,7 +2538,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     }
     if (_favoriteServers.isEmpty) {
       return Center(
-        child: Text(tr('noFavoritesYet'), textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13)),
+        child: Text(tr('noFavoritesYet'), textAlign: TextAlign.center, style: TextStyle(color: kFg.withValues(alpha: 0.4), fontSize: 13)),
       );
     }
     return RefreshIndicator(
@@ -2414,30 +2602,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   _sectionLabel(tr('appLanguage')),
                   const SizedBox(height: 8),
                   GlassPanel(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Pill(
-                            text: 'Deutsch',
-                            active: AppState.I.language == 'de',
-                            onTap: () {
-                              AppState.I.setLanguage('de');
-                              setState(() {});
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Pill(
-                            text: 'English',
-                            active: AppState.I.language == 'en',
-                            onTap: () {
-                              AppState.I.setLanguage('en');
-                              setState(() {});
-                            },
-                          ),
-                        ),
-                      ],
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: kLanguageNames.entries.map((entry) {
+                        return Pill(
+                          text: entry.value,
+                          active: AppState.I.language == entry.key,
+                          onTap: () {
+                            AppState.I.setLanguage(entry.key);
+                            setState(() {});
+                          },
+                        );
+                      }).toList(),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -2446,7 +2623,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   GlassPanel(
                     child: Column(
                       children: kThemeOptions.map((t) {
-                        final label = AppState.I.language == 'de' ? t.labelDe : t.labelEn;
+                        final label = tr(t.labelKey);
                         final active = AppState.I.themeKey == t.key;
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 6),
@@ -2482,7 +2659,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         Row(
                           children: [
                             Expanded(
-                              child: Text(tr('notificationsDesc'), style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.75))),
+                              child: Text(tr('notificationsDesc'), style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75))),
                             ),
                             Switch(
                               value: AppState.I.notificationsEnabled,
@@ -2495,8 +2672,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           ],
                         ),
                         if (AppState.I.notificationsEnabled) ...[
-                          Divider(height: 20, color: Colors.white.withValues(alpha: 0.06)),
-                          Text(tr('notificationThreshold'), style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.5))),
+                          Divider(height: 20, color: kFg.withValues(alpha: 0.06)),
+                          Text(tr('notificationThreshold'), style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5))),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -2520,8 +2697,41 @@ class _SettingsPageState extends State<SettingsPage> {
                               }),
                             ],
                           ),
+                          Divider(height: 20, color: kFg.withValues(alpha: 0.06)),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(tr('vibrationDesc'), style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75))),
+                              ),
+                              Switch(
+                                value: AppState.I.notificationVibration,
+                                activeColor: kAccent,
+                                onChanged: (v) {
+                                  AppState.I.setNotificationVibration(v);
+                                  setState(() {});
+                                },
+                              ),
+                            ],
+                          ),
                         ],
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(kRadius),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AboutPage()),
+                    ),
+                    child: GlassPanel(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(tr('about'), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                          ),
+                          Icon(Icons.chevron_right, color: kFg.withValues(alpha: 0.35)),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -2552,7 +2762,86 @@ class _SettingsPageState extends State<SettingsPage> {
         fontSize: 10.5,
         letterSpacing: 0.6,
         fontWeight: FontWeight.w600,
-        color: Colors.white.withValues(alpha: 0.4),
+        color: kFg.withValues(alpha: 0.4),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// About
+// ---------------------------------------------------------------------------
+
+class AboutPage extends StatelessWidget {
+  const AboutPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBg,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+              child: Row(
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(kRadius),
+                    onTap: () => Navigator.of(context).pop(),
+                    child: GlassPanel(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(Icons.arrow_back, size: 18, color: kFg),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    tr('about'),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                children: [
+                  Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.dns, size: 46, color: kAccent),
+                        const SizedBox(height: 12),
+                        Text(tr('appName'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${tr('aboutVersion')} $kAppVersion',
+                          style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  GlassPanel(
+                    child: Text(
+                      tr('aboutCredits'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75), height: 1.4),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  GlassPanel(
+                    child: Text(
+                      tr('aboutContact'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75), height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
