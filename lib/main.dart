@@ -1349,20 +1349,36 @@ class ServerDetailPage extends StatefulWidget {
 }
 
 class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerProviderStateMixin {
-  // The single-server detail endpoint has proven unreliable (empty
-  // responses that would otherwise wipe out good data), and the list
-  // fetch already carries everything this page needs (hostname, players
-  // with ping, resources, vars), so this page just displays what was
-  // passed in rather than re-fetching.
+  // The bulk list feed omits resources and most custom vars (623
+  // resources per server would balloon the ~20MB dump massively), so
+  // those are fetched separately here. Never lets a bad/partial response
+  // regress good data - it can only add resources/extra vars, never
+  // remove the reliable list-derived fields.
   late final GameServer _server = widget.server;
   late final TabController _tabController;
   final TextEditingController _scriptCtrl = TextEditingController();
+  List<String>? _fetchedResources;
+  Map<String, String>? _fetchedExtraVars;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _scriptCtrl.addListener(() => setState(() {}));
+    _loadExtras();
+  }
+
+  Future<void> _loadExtras() async {
+    try {
+      final detail = await ApiService.fetchServerDetail(_server.code);
+      if (!mounted) return;
+      setState(() {
+        if (detail.resources.isNotEmpty) _fetchedResources = detail.resources;
+        if (detail.vars.extra.isNotEmpty) _fetchedExtraVars = detail.vars.extra;
+      });
+    } catch (_) {
+      // Best-effort only - the page already shows the list-derived data.
+    }
   }
 
   @override
@@ -1471,7 +1487,6 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                   labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                   tabs: const [
                     Tab(text: 'Übersicht'),
-                    Tab(text: 'Spieler'),
                     Tab(text: 'Scripts'),
                   ],
                 ),
@@ -1482,9 +1497,14 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
         body: TabBarView(
           controller: _tabController,
           children: [
-            _OverviewTab(server: s),
-            _PlayersTab(server: s),
-            _ScriptsTab(server: s, controller: _scriptCtrl),
+            _OverviewTab(
+              server: s,
+              extraVars: {...s.vars.extra, ...?_fetchedExtraVars},
+            ),
+            _ScriptsTab(
+              resources: _fetchedResources ?? s.resources,
+              controller: _scriptCtrl,
+            ),
           ],
         ),
       ),
@@ -1560,7 +1580,8 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 
 class _OverviewTab extends StatelessWidget {
   final GameServer server;
-  const _OverviewTab({required this.server});
+  final Map<String, String> extraVars;
+  const _OverviewTab({required this.server, required this.extraVars});
 
   @override
   Widget build(BuildContext context) {
@@ -1620,14 +1641,14 @@ class _OverviewTab extends StatelessWidget {
             ),
           ),
         ],
-        if (s.vars.extra.isNotEmpty) ...[
+        if (extraVars.isNotEmpty) ...[
           const SizedBox(height: 10),
           GlassPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final entry in s.vars.extra.entries) ...[
-                  if (entry.key != s.vars.extra.entries.first.key) _divider(),
+                for (final entry in extraVars.entries) ...[
+                  if (entry.key != extraVars.entries.first.key) _divider(),
                   _infoRow(entry.key, entry.value),
                 ],
               ],
@@ -1671,53 +1692,15 @@ class _OverviewTab extends StatelessWidget {
   Widget _divider() => Divider(height: 1, color: Colors.white.withValues(alpha: 0.06));
 }
 
-class _PlayersTab extends StatelessWidget {
-  final GameServer server;
-  const _PlayersTab({required this.server});
-
-  @override
-  Widget build(BuildContext context) {
-    final players = [...server.players]..sort((a, b) => a.ping.compareTo(b.ping));
-    if (players.isEmpty) {
-      return Center(
-        child: Text('Keine Spielerdaten verfügbar.', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13)),
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      itemCount: players.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
-      itemBuilder: (context, index) {
-        final p = players[index];
-        return GlassPanel(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          child: Row(
-            children: [
-              const Icon(Icons.person_outline, size: 16, color: kAccent),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-              ),
-              Icon(Icons.network_ping, size: 13, color: Colors.white.withValues(alpha: 0.35)),
-              const SizedBox(width: 4),
-              Text('${p.ping} ms', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.6))),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
 class _ScriptsTab extends StatelessWidget {
-  final GameServer server;
+  final List<String> resources;
   final TextEditingController controller;
-  const _ScriptsTab({required this.server, required this.controller});
+  const _ScriptsTab({required this.resources, required this.controller});
 
   @override
   Widget build(BuildContext context) {
     final query = controller.text.trim().toLowerCase();
-    final resources = server.resources
+    final filtered = resources
         .where((r) => query.isEmpty || r.toLowerCase().contains(query))
         .toList();
     return Column(
@@ -1741,19 +1724,19 @@ class _ScriptsTab extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text('${resources.length}/${server.resources.length}', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.4))),
+                Text('${filtered.length}/${resources.length}', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.4))),
               ],
             ),
           ),
         ),
         Expanded(
-          child: resources.isEmpty
+          child: filtered.isEmpty
               ? Center(
                   child: Text('Keine Scripts gefunden.', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13)),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                  itemCount: resources.length,
+                  itemCount: filtered.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 6),
                   itemBuilder: (context, index) {
                     return GlassPanel(
@@ -1763,7 +1746,7 @@ class _ScriptsTab extends StatelessWidget {
                           Icon(Icons.extension_outlined, size: 15, color: Colors.white.withValues(alpha: 0.4)),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(resources[index], style: const TextStyle(fontSize: 12.5), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            child: Text(filtered[index], style: const TextStyle(fontSize: 12.5), maxLines: 1, overflow: TextOverflow.ellipsis),
                           ),
                         ],
                       ),
