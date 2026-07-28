@@ -284,7 +284,7 @@ class ApiService {
           timeout: const Duration(seconds: 60),
         );
         if (res.statusCode == 200) {
-          final servers = await compute(_parseList, res.body);
+          final servers = await compute(_parseList, _bodyText(res));
           if (servers.isNotEmpty) return servers;
           attemptErrors.add('$url: leere Antwort');
         } else {
@@ -355,7 +355,7 @@ class ApiService {
           attemptErrors.add('$url: HTTP ${res.statusCode}');
           continue;
         }
-        final decoded = jsonDecode(res.body);
+        final decoded = jsonDecode(_bodyText(res));
         Map<String, dynamic>? entry;
         if (decoded is Map) {
           if (decoded['Data'] is Map) {
@@ -372,6 +372,31 @@ class ApiService {
     }
     throw ApiException(
         'Serverdetails konnten nicht geladen werden.\n${attemptErrors.join('\n')}');
+  }
+
+  // The stream endpoint's response isn't always transparently
+  // gzip-decompressed depending on the connection path taken, so decode
+  // defensively: unzip if the bytes still look gzip-compressed, then
+  // decode as UTF-8, falling back to Latin-1 so a stray invalid byte
+  // somewhere in a server's user-supplied fields can't crash parsing.
+  static String _bodyText(http.Response res) {
+    final bytes = _gunzipIfNeeded(res.bodyBytes);
+    try {
+      return utf8.decode(bytes);
+    } catch (_) {
+      return latin1.decode(bytes);
+    }
+  }
+
+  static List<int> _gunzipIfNeeded(List<int> bytes) {
+    if (bytes.length > 2 && bytes[0] == 0x1F && bytes[1] == 0x8B) {
+      try {
+        return gzip.decode(bytes);
+      } catch (_) {
+        return bytes;
+      }
+    }
+    return bytes;
   }
 
   static final Map<String, InternetAddress> _dohIpCache = {};
@@ -462,8 +487,11 @@ class ApiService {
       final request = await client.getUrl(uri);
       _headers.forEach(request.headers.set);
       final response = await request.close().timeout(timeout);
-      final body = await response.transform(utf8.decoder).join();
-      return http.Response(body, response.statusCode);
+      final bytes = <int>[];
+      await for (final chunk in response) {
+        bytes.addAll(chunk);
+      }
+      return http.Response.bytes(bytes, response.statusCode);
     } finally {
       client.close(force: true);
     }
