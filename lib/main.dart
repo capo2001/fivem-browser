@@ -1176,7 +1176,7 @@ class _ServerListPageState extends State<ServerListPage> {
                   child: TextField(
                     controller: _searchCtrl,
                     style: const TextStyle(fontSize: 14),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
                       hintText: tr('search'),
@@ -1634,12 +1634,12 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                               opacity: 0.14,
                               borderOpacity: 0.4,
                               padding: const EdgeInsets.symmetric(vertical: 10),
-                              child: const Center(
+                              child: Center(
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.content_copy, size: 15, color: kAccent),
-                                    SizedBox(width: 6),
+                                    const SizedBox(width: 6),
                                     Text(tr('join'), style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: kAccent)),
                                   ],
                                 ),
@@ -1674,7 +1674,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.white.withValues(alpha: 0.4),
                   labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                  tabs: const [
+                  tabs: [
                     Tab(text: tr('overview')),
                     Tab(text: tr('scripts')),
                   ],
@@ -1904,7 +1904,7 @@ class _ScriptsTab extends StatelessWidget {
                   child: TextField(
                     controller: controller,
                     style: const TextStyle(fontSize: 13),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
                       hintText: tr('filterScripts'),
@@ -2310,7 +2310,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
       );
     }
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2.4));
+      return Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2.4));
     }
     if (_error != null) {
       return Center(
