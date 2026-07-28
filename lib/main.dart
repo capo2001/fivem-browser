@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -252,6 +253,65 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+// Minimal protobuf wire-format reader: enough to walk an unknown message's
+// fields (varint / length-delimited / 32-bit / 64-bit) without needing a
+// full .proto-generated schema or an extra dependency.
+class _ProtoReader {
+  final Uint8List bytes;
+  int _offset = 0;
+
+  _ProtoReader(this.bytes);
+
+  int _readVarint() {
+    var result = 0;
+    var shift = 0;
+    while (true) {
+      final b = bytes[_offset++];
+      result |= (b & 0x7F) << shift;
+      if (b & 0x80 == 0) break;
+      shift += 7;
+    }
+    return result;
+  }
+
+  Uint8List _readBytes(int length) {
+    final chunk = Uint8List.sublistView(bytes, _offset, _offset + length);
+    _offset += length;
+    return chunk;
+  }
+
+  /// Field number -> list of raw values (int for varint/fixed, Uint8List
+  /// for length-delimited), in encounter order, since fields may repeat.
+  Map<int, List<Object>> readFields() {
+    final fields = <int, List<Object>>{};
+    while (_offset < bytes.length) {
+      final tag = _readVarint();
+      final fieldNumber = tag >> 3;
+      final wireType = tag & 0x7;
+      Object value;
+      switch (wireType) {
+        case 0:
+          value = _readVarint();
+          break;
+        case 1:
+          value = _readBytes(8);
+          break;
+        case 2:
+          final len = _readVarint();
+          value = _readBytes(len);
+          break;
+        case 5:
+          value = _readBytes(4);
+          break;
+        default:
+          return fields;
+      }
+      fields.putIfAbsent(fieldNumber, () => []).add(value);
+    }
+    return fields;
+  }
+}
+
 class ApiService {
   static const Map<String, String> _headers = {
     'User-Agent':
@@ -284,7 +344,8 @@ class ApiService {
           timeout: const Duration(seconds: 60),
         );
         if (res.statusCode == 200) {
-          final servers = await compute(_parseList, _bodyText(res));
+          final bytes = Uint8List.fromList(_gunzipIfNeeded(res.bodyBytes));
+          final servers = await compute(_parseList, bytes);
           if (servers.isNotEmpty) return servers;
           attemptErrors.add('$url: leere Antwort');
         } else {
@@ -298,48 +359,105 @@ class ApiService {
         'Serverliste konnte nicht geladen werden.\n${attemptErrors.join('\n')}');
   }
 
+  // The stream feed is NOT JSON: it's a sequence of length-prefixed
+  // protobuf messages (confirmed against the open-source "cfx-api"
+  // reference implementation). Each record is:
+  //   [4-byte little-endian uint32 length][that many bytes: a `Server`
+  //   protobuf message with field 1 = EndPoint (string), field 2 = Data
+  //   (nested message)].
   // Runs in a background isolate via compute() since the full dump can be
   // several megabytes and tens of thousands of entries.
-  static List<GameServer> _parseList(String body) {
-    final trimmed = body.trim();
-    List<dynamic> rawList = const [];
-    try {
-      final decoded = jsonDecode(trimmed);
-      if (decoded is Map && decoded['Data'] is List) {
-        rawList = decoded['Data'] as List;
-      } else if (decoded is List) {
-        rawList = decoded;
-      } else if (decoded is Map) {
-        rawList = decoded.values.toList();
-      }
-    } on FormatException {
-      // Not a single JSON document: fall back to newline-delimited JSON,
-      // one server entry per line.
-      rawList = trimmed
-          .split('\n')
-          .map((line) => line.trim())
-          .where((line) => line.isNotEmpty)
-          .map((line) {
-            try {
-              return jsonDecode(line);
-            } catch (_) {
-              return null;
-            }
-          })
-          .whereType<Object>()
-          .toList();
-    }
+  static List<GameServer> _parseList(Uint8List bytes) {
     final result = <GameServer>[];
-    for (final item in rawList) {
-      if (item is Map) {
-        try {
-          result.add(GameServer.fromEntry(item.cast<String, dynamic>()));
-        } catch (_) {
-          // skip malformed entries
+    var offset = 0;
+    while (offset + 4 <= bytes.length) {
+      final len = bytes[offset] |
+          (bytes[offset + 1] << 8) |
+          (bytes[offset + 2] << 16) |
+          (bytes[offset + 3] << 24);
+      offset += 4;
+      if (len < 0 || offset + len > bytes.length) break;
+      final record = Uint8List.sublistView(bytes, offset, offset + len);
+      offset += len;
+      try {
+        final entry = _decodeServerEntry(record);
+        if (entry != null) {
+          result.add(GameServer.fromEntry(entry));
         }
+      } catch (_) {
+        // skip malformed entries
       }
     }
     return result;
+  }
+
+  static Map<String, dynamic>? _decodeServerEntry(Uint8List bytes) {
+    final fields = _ProtoReader(bytes).readFields();
+    final endpointRaw = fields[1]?.first;
+    final dataRaw = fields[2]?.first;
+    if (endpointRaw is! Uint8List || dataRaw is! Uint8List) return null;
+    return {
+      'EndPoint': utf8.decode(endpointRaw, allowMalformed: true),
+      'Data': _decodeServerData(dataRaw),
+    };
+  }
+
+  static Map<String, dynamic> _decodeServerData(Uint8List bytes) {
+    final fields = _ProtoReader(bytes).readFields();
+
+    String? stringField(int number) {
+      final v = fields[number]?.first;
+      return v is Uint8List ? utf8.decode(v, allowMalformed: true) : null;
+    }
+
+    int intField(int number) {
+      final v = fields[number]?.first;
+      return v is int ? v : 0;
+    }
+
+    List<String> repeatedString(int number) {
+      return (fields[number] ?? const [])
+          .whereType<Uint8List>()
+          .map((b) => utf8.decode(b, allowMalformed: true))
+          .toList();
+    }
+
+    final vars = <String, dynamic>{};
+    for (final entryBytes in fields[12] ?? const []) {
+      if (entryBytes is! Uint8List) continue;
+      final entryFields = _ProtoReader(entryBytes).readFields();
+      final keyRaw = entryFields[1]?.first;
+      final valueRaw = entryFields[2]?.first;
+      if (keyRaw is Uint8List && valueRaw is Uint8List) {
+        vars[utf8.decode(keyRaw, allowMalformed: true)] =
+            utf8.decode(valueRaw, allowMalformed: true);
+      }
+    }
+
+    final players = <Map<String, dynamic>>[];
+    for (final playerBytes in fields[10] ?? const []) {
+      if (playerBytes is! Uint8List) continue;
+      final p = _ProtoReader(playerBytes).readFields();
+      final nameRaw = p[1]?.first;
+      players.add({
+        'name': nameRaw is Uint8List ? utf8.decode(nameRaw, allowMalformed: true) : '',
+        'ping': (p[4]?.first is int) ? p[4]!.first as int : 0,
+        'id': (p[5]?.first is int) ? p[5]!.first as int : 0,
+      });
+    }
+
+    return {
+      'svMaxclients': intField(1),
+      'clients': intField(2),
+      'hostname': stringField(4) ?? '',
+      'gametype': stringField(5) ?? '',
+      'mapname': stringField(6) ?? '',
+      'resources': repeatedString(8),
+      'iconVersion': intField(11),
+      'vars': vars,
+      'upvotePower': intField(17),
+      'players': players,
+    };
   }
 
   static Future<GameServer> fetchServerDetail(String code) async {
