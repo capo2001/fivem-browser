@@ -110,6 +110,27 @@ class PlayerInfo {
   }
 }
 
+// vars keys already surfaced through a dedicated field elsewhere in the
+// UI, or internal FXServer convars not interesting to show to a player.
+const Set<String> _knownVarsKeys = {
+  'sv_projectname',
+  'sv_projectdesc',
+  'locale',
+  'tags',
+  'banner_detail',
+  'banner_connecting',
+  'onesync_enabled',
+  'sv_enforcegamebuild',
+  'sv_maxclients',
+  'sv_scripthookallowed',
+  'sv_appearallowlisted',
+  'premium',
+  'sv_enhancedhostsupport',
+  'activitypubfeed',
+  'sv_licensekeytoken',
+  'sv_lan',
+};
+
 class ServerVars {
   final String? projectName;
   final String? projectDesc;
@@ -118,6 +139,9 @@ class ServerVars {
   final String? bannerDetail;
   final bool onesyncEnabled;
   final String? enforceGameBuild;
+  // Server-operator-defined custom vars (e.g. "Website", "Discord",
+  // "Fahrzeuge") that aren't part of the fixed field set above.
+  final Map<String, String> extra;
 
   const ServerVars({
     this.projectName,
@@ -127,6 +151,7 @@ class ServerVars {
     this.bannerDetail,
     this.onesyncEnabled = false,
     this.enforceGameBuild,
+    this.extra = const {},
   });
 
   factory ServerVars.fromMap(Map<String, dynamic> m) {
@@ -144,6 +169,14 @@ class ServerVars {
     final projectName = nullIfEmpty(m['sv_projectName']);
     final projectDesc = nullIfEmpty(m['sv_projectDesc']);
 
+    final extra = <String, String>{};
+    for (final key in m.keys) {
+      if (_knownVarsKeys.contains(key.toLowerCase())) continue;
+      final value = nullIfEmpty(m[key]);
+      if (value == null) continue;
+      extra[key.replaceAll(':', '').trim()] = stripColorCodes(value);
+    }
+
     return ServerVars(
       projectName: projectName != null ? stripColorCodes(projectName) : null,
       projectDesc: projectDesc != null ? stripColorCodes(projectDesc) : null,
@@ -152,6 +185,7 @@ class ServerVars {
       bannerDetail: nullIfEmpty(m['banner_detail']),
       onesyncEnabled: _asBool(m['onesync_enabled']),
       enforceGameBuild: nullIfEmpty(m['sv_enforceGameBuild']),
+      extra: extra,
     );
   }
 }
@@ -773,6 +807,7 @@ class ServerListPage extends StatefulWidget {
 
 class _ServerListPageState extends State<ServerListPage> {
   List<GameServer> _servers = [];
+  List<String> _topTags = [];
   bool _loading = true;
   String? _error;
 
@@ -809,6 +844,7 @@ class _ServerListPageState extends State<ServerListPage> {
       servers.sort((a, b) => b.upvotePower.compareTo(a.upvotePower));
       setState(() {
         _servers = servers;
+        _topTags = _computeTopTags(servers);
         _loading = false;
       });
     } catch (e) {
@@ -823,13 +859,19 @@ class _ServerListPageState extends State<ServerListPage> {
   // free text and produces dozens of near-duplicate junk values.
   static const List<String> _availableCountries = ['DE', 'IT', 'US'];
 
-  List<String> get _availableTags {
-    final set = <String>{};
-    for (final s in _servers) {
-      set.addAll(s.tagsLower);
+  // Computed once when the list loads (not on every rebuild - with 30k+
+  // servers this was the main source of the filter panel's lag), and
+  // capped to the most common tags so the chip list stays small.
+  static List<String> _computeTopTags(List<GameServer> servers) {
+    final counts = <String, int>{};
+    for (final s in servers) {
+      for (final tag in s.tagsLower) {
+        counts[tag] = (counts[tag] ?? 0) + 1;
+      }
     }
-    final list = set.toList()..sort();
-    return list;
+    final sorted = counts.keys.toList()
+      ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    return sorted.take(24).toList();
   }
 
   List<GameServer> get _filtered {
@@ -977,7 +1019,7 @@ class _ServerListPageState extends State<ServerListPage> {
 
   Widget _buildFilterPanel() {
     final countries = _availableCountries;
-    final tags = _availableTags;
+    final tags = _topTags;
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
       child: GlassPanel(
@@ -1307,8 +1349,12 @@ class ServerDetailPage extends StatefulWidget {
 }
 
 class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerProviderStateMixin {
-  late GameServer _server = widget.server;
-  bool _refreshing = true;
+  // The single-server detail endpoint has proven unreliable (empty
+  // responses that would otherwise wipe out good data), and the list
+  // fetch already carries everything this page needs (hostname, players
+  // with ping, resources, vars), so this page just displays what was
+  // passed in rather than re-fetching.
+  late final GameServer _server = widget.server;
   late final TabController _tabController;
   final TextEditingController _scriptCtrl = TextEditingController();
 
@@ -1316,7 +1362,6 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _refresh();
     _scriptCtrl.addListener(() => setState(() {}));
   }
 
@@ -1325,26 +1370,6 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
     _tabController.dispose();
     _scriptCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _refresh() async {
-    setState(() => _refreshing = true);
-    try {
-      final detail = await ApiService.fetchServerDetail(_server.code);
-      // The single-server endpoint has proven flaky; never let a
-      // successful-but-empty response overwrite the good data we already
-      // have from the list.
-      if (mounted && detail.hostname.isNotEmpty) {
-        setState(() {
-          _server = detail;
-          _refreshing = false;
-        });
-      } else if (mounted) {
-        setState(() => _refreshing = false);
-      }
-    } catch (_) {
-      if (mounted) setState(() => _refreshing = false);
-    }
   }
 
   void _copyJoin() {
@@ -1457,7 +1482,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
         body: TabBarView(
           controller: _tabController,
           children: [
-            _OverviewTab(server: s, refreshing: _refreshing),
+            _OverviewTab(server: s),
             _PlayersTab(server: s),
             _ScriptsTab(server: s, controller: _scriptCtrl),
           ],
@@ -1535,8 +1560,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 
 class _OverviewTab extends StatelessWidget {
   final GameServer server;
-  final bool refreshing;
-  const _OverviewTab({required this.server, required this.refreshing});
+  const _OverviewTab({required this.server});
 
   @override
   Widget build(BuildContext context) {
@@ -1544,11 +1568,6 @@ class _OverviewTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        if (refreshing)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 10),
-            child: LinearProgressIndicator(minHeight: 2, color: kAccent, backgroundColor: Colors.transparent),
-          ),
         if (s.vars.projectDesc != null) ...[
           GlassPanel(
             child: Text(
@@ -1601,6 +1620,20 @@ class _OverviewTab extends StatelessWidget {
             ),
           ),
         ],
+        if (s.vars.extra.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          GlassPanel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final entry in s.vars.extra.entries) ...[
+                  if (entry.key != s.vars.extra.entries.first.key) _divider(),
+                  _infoRow(entry.key, entry.value),
+                ],
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1614,6 +1647,22 @@ class _OverviewTab extends StatelessWidget {
             child: Text(label, style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.5))),
           ),
           Text(value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  // Custom operator-set fields (e.g. "Website", "Discord") can be
+  // arbitrarily long, so label and value stack instead of sharing a row.
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.45))),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
         ],
       ),
     );
