@@ -47,6 +47,21 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Enable core library desugaring (required by flutter_local_notifications)
+        run: |
+          GRADLE=android/app/build.gradle.kts
+          if [ ! -f "$GRADLE" ]; then GRADLE=android/app/build.gradle; fi
+
+          if [[ "$GRADLE" == *.kts ]]; then
+            perl -0pi -e 's/(compileOptions \{)/$1\n        isCoreLibraryDesugaringEnabled = true/' "$GRADLE"
+            printf '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n' >> "$GRADLE"
+          else
+            perl -0pi -e 's/(compileOptions \{)/$1\n        coreLibraryDesugaringEnabled true/' "$GRADLE"
+            printf '\ndependencies {\n    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"\n}\n' >> "$GRADLE"
+          fi
+
+          grep -n 'esugar' "$GRADLE"
+
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
