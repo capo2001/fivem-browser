@@ -65,6 +65,66 @@ jobs:
 
           grep -n 'esugar' "$GRADLE"
 
+      - name: Disable release minification (R8 strips WorkManager's reflectively-used classes)
+        run: |
+          GRADLE=android/app/build.gradle.kts
+          if [ ! -f "$GRADLE" ]; then GRADLE=android/app/build.gradle; fi
+
+          if [[ "$GRADLE" == *.kts ]]; then
+            if grep -q 'isMinifyEnabled' "$GRADLE"; then
+              sed -i 's/isMinifyEnabled\s*=\s*true/isMinifyEnabled = false/' "$GRADLE"
+            else
+              perl -0pi -e 's/(release \{)/$1\n            isMinifyEnabled = false/' "$GRADLE"
+            fi
+            if grep -q 'isShrinkResources' "$GRADLE"; then
+              sed -i 's/isShrinkResources\s*=\s*true/isShrinkResources = false/' "$GRADLE"
+            else
+              perl -0pi -e 's/(release \{)/$1\n            isShrinkResources = false/' "$GRADLE"
+            fi
+          else
+            if grep -q 'minifyEnabled' "$GRADLE"; then
+              sed -i 's/minifyEnabled\s*true/minifyEnabled false/' "$GRADLE"
+            else
+              perl -0pi -e 's/(release \{)/$1\n            minifyEnabled false/' "$GRADLE"
+            fi
+            if grep -q 'shrinkResources' "$GRADLE"; then
+              sed -i 's/shrinkResources\s*true/shrinkResources false/' "$GRADLE"
+            else
+              perl -0pi -e 's/(release \{)/$1\n            shrinkResources false/' "$GRADLE"
+            fi
+          fi
+
+          grep -n -i 'minify\|shrinkResources' "$GRADLE"
+
+      - name: Add defensive ProGuard keep rules (in case minification is re-enabled)
+        run: |
+          cat >> android/app/proguard-rules.pro <<'EOF'
+
+          # WorkManager stores its own Room database implementation and instantiates it via
+          # reflection; R8 can't see that usage statically and will strip it, crashing the
+          # app at startup with "Unable to get provider androidx.startup.InitializationProvider".
+          -keep class androidx.work.impl.WorkDatabase_Impl { *; }
+          -keep class * extends androidx.work.ListenableWorker {
+              <init>(android.content.Context, androidx.work.WorkerParameters);
+          }
+          -keep class androidx.work.** { *; }
+          -dontwarn androidx.work.**
+
+          # flutter_local_notifications (<19) uses Gson reflectively for its payload data class.
+          -keepattributes Signature
+          -keepattributes *Annotation*
+          -dontwarn sun.misc.**
+          -keep class * extends com.google.gson.TypeAdapter
+          -keep class * implements com.google.gson.TypeAdapterFactory
+          -keep class * implements com.google.gson.JsonSerializer
+          -keep class * implements com.google.gson.JsonDeserializer
+          -keepclassmembers,allowobfuscation class * {
+            @com.google.gson.annotations.SerializedName <fields>;
+          }
+          -keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken
+          -keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
+          EOF
+
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
