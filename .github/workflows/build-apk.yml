@@ -14,6 +14,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Diagnose server-list stream response
+        run: |
+          URL="https://frontend.cfx-services.net/api/servers/streamRedir/"
+          echo "--- headers ---"
+          curl -sS -D - -o /tmp/body.raw -L \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            -H "Accept: application/json, text/plain, */*" \
+            -H "Origin: https://servers.fivem.net" \
+            -H "Referer: https://servers.fivem.net/" \
+            "$URL" | head -c 4000
+          echo
+          echo "--- file type ---"
+          file /tmp/body.raw
+          echo "--- size ---"
+          wc -c /tmp/body.raw
+          echo "--- first 400 bytes hex+ascii ---"
+          xxd /tmp/body.raw | head -n 25
+          echo "--- gunzip attempt (first 2000 bytes if it works) ---"
+          gunzip -c /tmp/body.raw 2>/tmp/gunzip.err | head -c 2000 || true
+          cat /tmp/gunzip.err || true
+        continue-on-error: true
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
