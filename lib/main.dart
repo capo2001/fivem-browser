@@ -228,21 +228,33 @@ Future<void> _initNotifications() async {
       ?.requestNotificationsPermission();
 }
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await AppState.I.load();
-  await _initNotifications();
-  try {
-    await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
-    await Workmanager().registerPeriodicTask(
-      kFavoriteCheckTask,
-      kFavoriteCheckTask,
-      frequency: const Duration(minutes: 15),
-    );
-  } catch (_) {
-    // Background scheduling is best-effort; the app still works without it.
-  }
-  runApp(const FivemBrowserApp());
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    try {
+      await AppState.I.load();
+    } catch (_) {
+      // Fall back to in-memory defaults if persisted prefs can't be read.
+    }
+    try {
+      await _initNotifications();
+    } catch (_) {
+      // Notifications are best-effort; the app still works without them.
+    }
+    try {
+      await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+      await Workmanager().registerPeriodicTask(
+        kFavoriteCheckTask,
+        kFavoriteCheckTask,
+        frequency: const Duration(minutes: 15),
+      );
+    } catch (_) {
+      // Background scheduling is best-effort; the app still works without it.
+    }
+    runApp(const FivemBrowserApp());
+  }, (error, stack) {
+    debugPrint('Uncaught error: $error\n$stack');
+  });
 }
 
 class FivemBrowserApp extends StatelessWidget {

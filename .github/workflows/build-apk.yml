@@ -30,11 +30,14 @@ jobs:
           flutter create --platforms=android --project-name fivem_browser --org de.gio.fivembrowser /tmp/shell
           cp -r /tmp/shell/android ./android
 
-      - name: Ensure INTERNET permission is declared
+      - name: Ensure required permissions are declared
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
           if ! grep -q 'android.permission.INTERNET' "$MANIFEST"; then
             sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.INTERNET" />#' "$MANIFEST"
+          fi
+          if ! grep -q 'android.permission.POST_NOTIFICATIONS' "$MANIFEST"; then
+            sed -i 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />#' "$MANIFEST"
           fi
           grep -n 'uses-permission' "$MANIFEST"
 
