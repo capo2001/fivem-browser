@@ -10,7 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 const Color kBg = Color(0xFF070A0F);
-const Color kAccent = Color(0xFF4C8DFF);
+const Color kAccent = Color(0xFFD4D8DF);
 const Color kSurface = Color(0xFF10141C);
 const double kRadius = 5;
 
@@ -264,12 +264,6 @@ class GameServer {
     'US': {'US', 'USA', 'EUA', 'AMERICA', 'UNITEDSTATES'},
   };
 
-  static const Map<String, String> countryFlags = {
-    'DE': '🇩🇪',
-    'IT': '🇮🇹',
-    'US': '🇺🇸',
-  };
-
   String? get countryGroup {
     final locale = vars.locale;
     if (locale == null || locale.isEmpty) return null;
@@ -283,15 +277,7 @@ class GameServer {
     return null;
   }
 
-  String? get countryFlag {
-    final group = countryGroup;
-    return group != null ? countryFlags[group] : null;
-  }
-
   Set<String> get tagsLower => vars.tags.map((t) => t.toLowerCase()).toSet();
-
-  double get loadRatio =>
-      svMaxclients > 0 ? (clients / svMaxclients).clamp(0, 1).toDouble() : 0.0;
 
   String get iconUrl =>
       'https://frontend.cfx-services.net/api/servers/icon/$code/$iconVersion.png';
@@ -531,15 +517,13 @@ class ApiService {
           continue;
         }
         final decoded = jsonDecode(_bodyText(res));
-        Map<String, dynamic>? entry;
-        if (decoded is Map) {
-          if (decoded['Data'] is Map) {
-            entry = (decoded['Data'] as Map).cast<String, dynamic>();
-          } else if (decoded['EndPoint'] != null) {
-            entry = decoded.cast<String, dynamic>();
-          }
+        // fromEntry expects the *whole* {EndPoint, Data} wrapper (it does
+        // its own entry['Data'] lookup) - passing decoded['Data'] here
+        // directly was the long-standing bug that left every field empty.
+        if (decoded is Map &&
+            (decoded['Data'] is Map || decoded['EndPoint'] != null)) {
+          return GameServer.fromEntry(decoded.cast<String, dynamic>());
         }
-        if (entry != null) return GameServer.fromEntry(entry);
         attemptErrors.add('$url: unerwartetes Antwortformat');
       } catch (e) {
         attemptErrors.add('$url: $e');
@@ -719,29 +703,6 @@ class GlassPanel extends StatelessWidget {
             ),
           ),
           child: child,
-        ),
-      ),
-    );
-  }
-}
-
-class LoadBar extends StatelessWidget {
-  final double ratio;
-  final double height;
-
-  const LoadBar({super.key, required this.ratio, this.height = 4});
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(height / 2),
-      child: Container(
-        height: height,
-        color: Colors.white.withValues(alpha: 0.08),
-        child: FractionallySizedBox(
-          alignment: Alignment.centerLeft,
-          widthFactor: ratio.clamp(0.0, 1.0),
-          child: Container(color: kAccent),
         ),
       ),
     );
@@ -1082,7 +1043,7 @@ class _ServerListPageState extends State<ServerListPage> {
                 children: countries.map((c) {
                   final active = _selectedCountry == c;
                   return Pill(
-                    text: GameServer.countryFlags[c] ?? c,
+                    text: c,
                     active: active,
                     onTap: () => setState(() {
                       _selectedCountry = active ? null : c;
@@ -1210,61 +1171,61 @@ class ServerTile extends StatelessWidget {
       },
       child: GlassPanel(
         padding: const EdgeInsets.all(10),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            _ServerIcon(server: server, size: 52),
+            const SizedBox(width: 10),
+            _BoostBadge(power: server.upvotePower),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    server.hostname,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  if (server.vars.tags.isNotEmpty)
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: server.vars.tags.take(3).map((t) {
+                        return Text(
+                          t,
+                          style: TextStyle(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.4)),
+                        );
+                      }).toList(),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _BoostBadge(power: server.upvotePower),
-                const SizedBox(width: 8),
-                _ServerIcon(server: server, size: 40),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                if (server.countryGroup != null)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      Icon(Icons.public, size: 11, color: Colors.white.withValues(alpha: 0.35)),
+                      const SizedBox(width: 3),
                       Text(
-                        server.hostname,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                        server.countryGroup!,
+                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.45), letterSpacing: 0.4),
                       ),
-                      const SizedBox(height: 4),
-                      if (server.vars.tags.isNotEmpty)
-                        Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
-                          children: server.vars.tags.take(3).map((t) {
-                            return Text(
-                              t,
-                              style: TextStyle(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.4)),
-                            );
-                          }).toList(),
-                        ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (server.countryFlag != null)
-                      Text(
-                        server.countryFlag!,
-                        style: const TextStyle(fontSize: 15),
-                      ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${server.clients}/${server.svMaxclients}',
-                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  '${server.clients}/${server.svMaxclients}',
+                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            LoadBar(ratio: server.loadRatio),
           ],
         ),
       ),
@@ -1279,20 +1240,19 @@ class _BoostBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 30,
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(kRadius),
-        color: kAccent.withValues(alpha: 0.10),
-        border: Border.all(color: kAccent.withValues(alpha: 0.30)),
+        color: kAccent.withValues(alpha: 0.08),
+        border: Border.all(color: kAccent.withValues(alpha: 0.25)),
       ),
-      child: Column(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.bolt, size: 13, color: kAccent),
+          const Icon(Icons.keyboard_arrow_up, size: 15, color: kAccent),
           Text(
             '$power',
-            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: kAccent),
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: kAccent),
           ),
         ],
       ),
@@ -1423,17 +1383,31 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      s.hostname,
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _ServerIcon(server: s, size: 44),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                s.hostname,
+                                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                              ),
+                              if (s.vars.projectName != null && s.vars.projectName != s.hostname) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  s.vars.projectName!,
+                                  style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.5)),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    if (s.vars.projectName != null && s.vars.projectName != s.hostname) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        s.vars.projectName!,
-                        style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.5)),
-                      ),
-                    ],
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -1607,8 +1581,6 @@ class _OverviewTab extends StatelessWidget {
               _statRow('Map', s.mapname.isEmpty ? '—' : s.mapname),
               _divider(),
               _statRow('Spieler', '${s.clients} / ${s.svMaxclients}'),
-              const SizedBox(height: 6),
-              LoadBar(ratio: s.loadRatio, height: 5),
               _divider(),
               _statRow('Boost', '${s.upvotePower}'),
               _divider(),
