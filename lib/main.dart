@@ -14,6 +14,7 @@ import 'package:workmanager/workmanager.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:quick_actions/quick_actions.dart';
+import 'package:home_widget/home_widget.dart';
 
 const Color _kDarkBg = Color(0xFF070A0F);
 const Color _kDarkSurface = Color(0xFF10141C);
@@ -86,98 +87,110 @@ String themeModeLabelKey(String mode) {
 // ---------------------------------------------------------------------------
 
 const Map<String, Map<String, String>> _strings = {
-  'appName': {'de': 'Fserver', 'en': 'Fserver', 'fr': 'Fserver', 'es': 'Fserver', 'pl': 'Fserver'},
-  'serverList': {'de': 'Serverliste', 'en': 'Server list', 'fr': 'Liste des serveurs', 'es': 'Lista de servidores', 'pl': 'Lista serwerów'},
-  'favorites': {'de': 'Favoriten', 'en': 'Favorites', 'fr': 'Favoris', 'es': 'Favoritos', 'pl': 'Ulubione'},
-  'favoritesSubtitle': {'de': 'Deine gespeicherten Server', 'en': 'Your saved servers', 'fr': 'Vos serveurs enregistrés', 'es': 'Tus servidores guardados', 'pl': 'Twoje zapisane serwery'},
-  'serverListSubtitle': {'de': 'Alle Server durchsuchen', 'en': 'Browse all servers', 'fr': 'Parcourir tous les serveurs', 'es': 'Explorar todos los servidores', 'pl': 'Przeglądaj wszystkie serwery'},
-  'settings': {'de': 'Einstellungen', 'en': 'Settings', 'fr': 'Paramètres', 'es': 'Ajustes', 'pl': 'Ustawienia'},
-  'search': {'de': 'Server suchen', 'en': 'Search servers', 'fr': 'Rechercher un serveur', 'es': 'Buscar servidores', 'pl': 'Szukaj serwerów'},
-  'retry': {'de': 'Erneut versuchen', 'en': 'Retry', 'fr': 'Réessayer', 'es': 'Reintentar', 'pl': 'Spróbuj ponownie'},
-  'noServersFound': {'de': 'Keine Server gefunden.', 'en': 'No servers found.', 'fr': 'Aucun serveur trouvé.', 'es': 'No se encontraron servidores.', 'pl': 'Nie znaleziono serwerów.'},
-  'noFavoritesYet': {'de': 'Noch keine Favoriten. Tippe auf den Stern in einem Serverprofil.', 'en': 'No favorites yet. Tap the star on a server profile.', 'fr': "Pas encore de favoris. Appuyez sur l'étoile dans le profil d'un serveur.", 'es': 'Aún no hay favoritos. Toca la estrella en el perfil de un servidor.', 'pl': 'Brak ulubionych. Stuknij gwiazdkę w profilu serwera.'},
-  'loading': {'de': 'Lade komplette Serverliste…\ndas kann bis zu 30 Sekunden dauern', 'en': 'Loading full server list…\nthis can take up to 30 seconds', 'fr': 'Chargement de la liste complète des serveurs…\ncela peut prendre jusqu\'à 30 secondes', 'es': 'Cargando la lista completa de servidores…\npuede tardar hasta 30 segundos', 'pl': 'Ładowanie pełnej listy serwerów…\nmoże to potrwać do 30 sekund'},
-  'hideEmpty': {'de': 'Leere ausblenden', 'en': 'Hide empty', 'fr': 'Masquer les vides', 'es': 'Ocultar vacíos', 'pl': 'Ukryj puste'},
-  'hideFull': {'de': 'Volle ausblenden', 'en': 'Hide full', 'fr': 'Masquer les pleins', 'es': 'Ocultar llenos', 'pl': 'Ukryj pełne'},
-  'country': {'de': 'Land', 'en': 'Country', 'fr': 'Pays', 'es': 'País', 'pl': 'Kraj'},
-  'tagsHint': {'de': 'Tags (1x einschließen, 2x ausschließen)', 'en': 'Tags (tap once to include, twice to exclude)', 'fr': 'Tags (appuyez une fois pour inclure, deux fois pour exclure)', 'es': 'Etiquetas (toca una vez para incluir, dos para excluir)', 'pl': 'Tagi (dotknij raz, aby uwzględnić, dwa razy, aby wykluczyć)'},
-  'join': {'de': 'Beitreten', 'en': 'Join', 'fr': 'Rejoindre', 'es': 'Unirse', 'pl': 'Dołącz'},
-  'copied': {'de': 'Kopiert', 'en': 'Copied', 'fr': 'Copié', 'es': 'Copiado', 'pl': 'Skopiowano'},
-  'overview': {'de': 'Übersicht', 'en': 'Overview', 'fr': 'Aperçu', 'es': 'Resumen', 'pl': 'Przegląd'},
-  'scripts': {'de': 'Scripts', 'en': 'Scripts', 'fr': 'Scripts', 'es': 'Scripts', 'pl': 'Skrypty'},
-  'filterScripts': {'de': 'Script filtern', 'en': 'Filter scripts', 'fr': 'Filtrer les scripts', 'es': 'Filtrar scripts', 'pl': 'Filtruj skrypty'},
-  'noScriptsFound': {'de': 'Keine Scripts gefunden.', 'en': 'No scripts found.', 'fr': 'Aucun script trouvé.', 'es': 'No se encontraron scripts.', 'pl': 'Nie znaleziono skryptów.'},
-  'gametype': {'de': 'Gametype', 'en': 'Gametype', 'fr': 'Type de jeu', 'es': 'Tipo de juego', 'pl': 'Typ gry'},
-  'map': {'de': 'Map', 'en': 'Map', 'fr': 'Carte', 'es': 'Mapa', 'pl': 'Mapa'},
-  'players': {'de': 'Spieler', 'en': 'Players', 'fr': 'Joueurs', 'es': 'Jugadores', 'pl': 'Gracze'},
-  'boost': {'de': 'Boost', 'en': 'Boost', 'fr': 'Boost', 'es': 'Boost', 'pl': 'Boost'},
-  'onesync': {'de': 'OneSync', 'en': 'OneSync', 'fr': 'OneSync', 'es': 'OneSync', 'pl': 'OneSync'},
-  'active': {'de': 'Aktiv', 'en': 'Active', 'fr': 'Actif', 'es': 'Activo', 'pl': 'Aktywny'},
-  'inactive': {'de': 'Inaktiv', 'en': 'Inactive', 'fr': 'Inactif', 'es': 'Inactivo', 'pl': 'Nieaktywny'},
-  'build': {'de': 'Build', 'en': 'Build', 'fr': 'Build', 'es': 'Build', 'pl': 'Build'},
-  'language': {'de': 'Sprache', 'en': 'Language', 'fr': 'Langue', 'es': 'Idioma', 'pl': 'Język'},
-  'tags': {'de': 'Tags', 'en': 'Tags', 'fr': 'Tags', 'es': 'Etiquetas', 'pl': 'Tagi'},
-  'onboardingWelcome': {'de': 'Willkommen', 'en': 'Welcome', 'fr': 'Bienvenue', 'es': 'Bienvenido', 'pl': 'Witamy'},
-  'onboardingLanguage': {'de': 'Wähle deine Sprache', 'en': 'Choose your language', 'fr': 'Choisissez votre langue', 'es': 'Elige tu idioma', 'pl': 'Wybierz swój język'},
-  'onboardingTheme': {'de': 'Wähle dein Farbschema', 'en': 'Choose your color scheme', 'fr': 'Choisissez votre thème de couleur', 'es': 'Elige tu esquema de color', 'pl': 'Wybierz swój schemat kolorów'},
-  'continueLabel': {'de': 'Weiter', 'en': 'Continue', 'fr': 'Continuer', 'es': 'Continuar', 'pl': 'Dalej'},
-  'getStarted': {'de': 'Los geht\'s', 'en': 'Get started', 'fr': 'Commencer', 'es': 'Comenzar', 'pl': 'Zaczynajmy'},
-  'appLanguage': {'de': 'App-Sprache', 'en': 'App language', 'fr': "Langue de l'app", 'es': 'Idioma de la app', 'pl': 'Język aplikacji'},
-  'colorScheme': {'de': 'Farbschema', 'en': 'Color scheme', 'fr': 'Thème de couleur', 'es': 'Esquema de color', 'pl': 'Schemat kolorów'},
-  'notifications': {'de': 'Benachrichtigungen', 'en': 'Notifications', 'fr': 'Notifications', 'es': 'Notificaciones', 'pl': 'Powiadomienia'},
-  'notificationsDesc': {'de': 'Benachrichtigung senden, wenn ein favorisierter Server genug Spieler hat', 'en': 'Notify me when a favorite server has enough players', 'fr': "M'avertir quand un serveur favori a assez de joueurs", 'es': 'Avisarme cuando un servidor favorito tenga suficientes jugadores', 'pl': 'Powiadom mnie, gdy ulubiony serwer ma wystarczająco graczy'},
-  'notificationThreshold': {'de': 'Ab wie vielen Spielern benachrichtigen', 'en': 'Notify from this many players', 'fr': 'Notifier à partir de ce nombre de joueurs', 'es': 'Notificar a partir de esta cantidad de jugadores', 'pl': 'Powiadamiaj od tylu graczy'},
-  'favoriteThreshold': {'de': 'Schwelle für diesen Server', 'en': 'Threshold for this server', 'fr': 'Seuil pour ce serveur', 'es': 'Umbral para este servidor', 'pl': 'Próg dla tego serwera'},
-  'useDefaultThreshold': {'de': 'Standard verwenden', 'en': 'Use default', 'fr': 'Utiliser la valeur par défaut', 'es': 'Usar valor predeterminado', 'pl': 'Użyj domyślnej'},
-  'notificationSound': {'de': 'Benachrichtigungston', 'en': 'Notification sound', 'fr': 'Son de notification', 'es': 'Sonido de notificación', 'pl': 'Dźwięk powiadomienia'},
-  'soundDefault': {'de': 'Standard', 'en': 'Default', 'fr': 'Par défaut', 'es': 'Predeterminado', 'pl': 'Domyślny'},
-  'soundChime': {'de': 'Glockenspiel', 'en': 'Chime', 'fr': 'Carillon', 'es': 'Campanilla', 'pl': 'Dzwonek'},
-  'soundBell': {'de': 'Glocke', 'en': 'Bell', 'fr': 'Cloche', 'es': 'Campana', 'pl': 'Dzwon'},
-  'tutorialServerListTitle': {'de': 'Serverliste', 'en': 'Server list', 'fr': 'Liste des serveurs', 'es': 'Lista de servidores', 'pl': 'Lista serwerów'},
-  'tutorialServerListDesc': {'de': 'Hier findest du alle FiveM-Server, kannst filtern, sortieren und suchen.', 'en': 'Browse every FiveM server here, with filtering, sorting and search.', 'fr': 'Parcourez ici tous les serveurs FiveM, avec filtres, tri et recherche.', 'es': 'Explora aquí todos los servidores FiveM, con filtros, orden y búsqueda.', 'pl': 'Tutaj znajdziesz wszystkie serwery FiveM z filtrowaniem, sortowaniem i wyszukiwaniem.'},
-  'tutorialFavoritesTitle': {'de': 'Favoriten', 'en': 'Favorites', 'fr': 'Favoris', 'es': 'Favoritos', 'pl': 'Ulubione'},
-  'tutorialFavoritesDesc': {'de': 'Markiere Server als Favorit, um Benachrichtigungen zu erhalten, wenn sie online gehen oder genug Spieler haben.', 'en': 'Star a server as favorite to get notified when it comes online or reaches enough players.', 'fr': 'Marquez un serveur comme favori pour être averti quand il est en ligne ou atteint assez de joueurs.', 'es': 'Marca un servidor como favorito para recibir avisos cuando esté en línea o tenga suficientes jugadores.', 'pl': 'Oznacz serwer jako ulubiony, aby otrzymać powiadomienie, gdy będzie online lub ma wystarczająco graczy.'},
-  'tutorialSettingsTitle': {'de': 'Einstellungen', 'en': 'Settings', 'fr': 'Paramètres', 'es': 'Ajustes', 'pl': 'Ustawienia'},
-  'tutorialSettingsDesc': {'de': 'Sprache, Design, Textgröße, Sounds und Benachrichtigungen kannst du hier anpassen.', 'en': 'Adjust language, theme, text size, sounds and notifications here.', 'fr': "Ajustez ici la langue, le thème, la taille du texte, les sons et les notifications.", 'es': 'Ajusta aquí el idioma, el tema, el tamaño del texto, los sonidos y las notificaciones.', 'pl': 'Dostosuj tutaj język, motyw, rozmiar tekstu, dźwięki i powiadomienia.'},
-  'tutorialNext': {'de': 'Weiter', 'en': 'Next', 'fr': 'Suivant', 'es': 'Siguiente', 'pl': 'Dalej'},
-  'tutorialDone': {'de': 'Fertig', 'en': 'Done', 'fr': 'Terminé', 'es': 'Listo', 'pl': 'Gotowe'},
-  'tutorialSkip': {'de': 'Überspringen', 'en': 'Skip', 'fr': 'Passer', 'es': 'Omitir', 'pl': 'Pomiń'},
-  'autoRefresh': {'de': 'Auto-Aktualisierung', 'en': 'Auto-refresh', 'fr': 'Actualisation automatique', 'es': 'Actualización automática', 'pl': 'Automatyczne odświeżanie'},
-  'autoRefreshDesc': {'de': 'Wie oft sich die Serverliste im Hintergrund selbst aktualisiert', 'en': 'How often the server list refreshes itself automatically', 'fr': 'À quelle fréquence la liste des serveurs se rafraîchit automatiquement', 'es': 'Con qué frecuencia se actualiza automáticamente la lista de servidores', 'pl': 'Jak często lista serwerów odświeża się automatycznie'},
-  'uiSounds': {'de': 'Sound', 'en': 'Sound', 'fr': 'Son', 'es': 'Sonido', 'pl': 'Dźwięk'},
-  'uiSoundsDesc': {'de': 'Sound-Effekte bei Berührungen und beim App-Start abspielen', 'en': 'Play sound effects on taps and at app startup', 'fr': 'Jouer des effets sonores lors des interactions et au démarrage', 'es': 'Reproducir efectos de sonido al tocar y al iniciar la app', 'pl': 'Odtwarzaj dźwięki przy dotknięciach i przy starcie aplikacji'},
-  'haptics': {'de': 'Vibration bei Berührung', 'en': 'Haptic feedback', 'fr': 'Retour haptique', 'es': 'Retroalimentación háptica', 'pl': 'Wibracje dotykowe'},
-  'hapticsDesc': {'de': 'Kurz vibrieren bei Berührungen in der App', 'en': 'Brief vibration on taps within the app', 'fr': 'Légère vibration lors des interactions dans l\'app', 'es': 'Vibración breve al tocar dentro de la app', 'pl': 'Krótka wibracja przy dotknięciach w aplikacji'},
-  'textSize': {'de': 'Schriftgröße', 'en': 'Text size', 'fr': 'Taille du texte', 'es': 'Tamaño del texto', 'pl': 'Rozmiar tekstu'},
-  'textSizeSmall': {'de': 'Klein', 'en': 'Small', 'fr': 'Petit', 'es': 'Pequeño', 'pl': 'Mały'},
-  'textSizeNormal': {'de': 'Normal', 'en': 'Normal', 'fr': 'Normal', 'es': 'Normal', 'pl': 'Normalny'},
-  'textSizeLarge': {'de': 'Groß', 'en': 'Large', 'fr': 'Grand', 'es': 'Grande', 'pl': 'Duży'},
-  'highContrast': {'de': 'Hoher Kontrast', 'en': 'High contrast', 'fr': 'Contraste élevé', 'es': 'Alto contraste', 'pl': 'Wysoki kontrast'},
-  'highContrastDesc': {'de': 'Kräftigere Farben und besserer Textkontrast für schwächeres Sehen', 'en': 'Bolder colors and stronger text contrast for low vision', 'fr': 'Couleurs plus marquées et meilleur contraste de texte', 'es': 'Colores más fuertes y mejor contraste de texto', 'pl': 'Mocniejsze kolory i lepszy kontrast tekstu'},
-  'favoriteOfflineTitle': {'de': 'Server offline', 'en': 'Server offline', 'fr': 'Serveur hors ligne', 'es': 'Servidor fuera de línea', 'pl': 'Serwer offline'},
-  'favoriteOfflineBody': {'de': '{name} ist nicht mehr erreichbar', 'en': '{name} is no longer reachable', 'fr': '{name} n\'est plus accessible', 'es': '{name} ya no está disponible', 'pl': '{name} jest niedostępny'},
-  'favoriteOnlineTitle': {'de': 'Server wieder online', 'en': 'Server back online', 'fr': 'Serveur de nouveau en ligne', 'es': 'Servidor de nuevo en línea', 'pl': 'Serwer znowu online'},
-  'favoriteOnlineBody': {'de': '{name} ist wieder erreichbar', 'en': '{name} is reachable again', 'fr': '{name} est de nouveau accessible', 'es': '{name} está disponible de nuevo', 'pl': '{name} jest znowu dostępny'},
-  'favoriteThresholdBody': {'de': 'hat gerade {clients} Spieler', 'en': 'has {clients} players right now', 'fr': 'a {clients} joueurs en ce moment', 'es': 'tiene {clients} jugadores ahora', 'pl': 'ma teraz {clients} graczy'},
-  'newBadge': {'de': 'NEU', 'en': 'NEW', 'fr': 'NOUVEAU', 'es': 'NUEVO', 'pl': 'NOWY'},
-  'back': {'de': 'Zurück', 'en': 'Back', 'fr': 'Retour', 'es': 'Atrás', 'pl': 'Wstecz'},
-  'unreachable': {'de': 'Live-Details nicht erreichbar', 'en': 'Live details unreachable', 'fr': 'Détails en direct indisponibles', 'es': 'Detalles en vivo no disponibles', 'pl': 'Brak dostępu do szczegółów na żywo'},
-  'topServersNearYou': {'de': 'Top 3 in deiner Region', 'en': 'Top 3 in your region', 'fr': 'Top 3 dans ta région', 'es': 'Top 3 en tu región', 'pl': 'Top 3 w Twoim regionie'},
-  'themeLight': {'de': 'Hell', 'en': 'Light', 'fr': 'Clair', 'es': 'Claro', 'pl': 'Jasny'},
-  'themeDark': {'de': 'Dunkel', 'en': 'Dark', 'fr': 'Sombre', 'es': 'Oscuro', 'pl': 'Ciemny'},
-  'themeAuto': {'de': 'Automatisch', 'en': 'Automatic', 'fr': 'Automatique', 'es': 'Automático', 'pl': 'Automatyczny'},
-  'sortBy': {'de': 'Sortierung', 'en': 'Sort by', 'fr': 'Trier par', 'es': 'Ordenar por', 'pl': 'Sortowanie'},
-  'sortDefault': {'de': 'Standard', 'en': 'Default', 'fr': 'Par défaut', 'es': 'Predeterminado', 'pl': 'Domyślne'},
-  'sortMostPlayers': {'de': 'Meiste Spieler', 'en': 'Most players', 'fr': 'Plus de joueurs', 'es': 'Más jugadores', 'pl': 'Najwięcej graczy'},
-  'sortMostBoost': {'de': 'Höchster Boost', 'en': 'Highest boost', 'fr': 'Boost le plus élevé', 'es': 'Más boost', 'pl': 'Najwyższy boost'},
-  'playerRange': {'de': 'Spieleranzahl', 'en': 'Player count', 'fr': 'Nombre de joueurs', 'es': 'Número de jugadores', 'pl': 'Liczba graczy'},
-  'share': {'de': 'Teilen', 'en': 'Share', 'fr': 'Partager', 'es': 'Compartir', 'pl': 'Udostępnij'},
-  'vibration': {'de': 'Vibration', 'en': 'Vibration', 'fr': 'Vibration', 'es': 'Vibración', 'pl': 'Wibracje'},
-  'vibrationDesc': {'de': 'Bei Benachrichtigung vibrieren', 'en': 'Vibrate on notification', 'fr': 'Vibrer lors d\'une notification', 'es': 'Vibrar con la notificación', 'pl': 'Wibruj przy powiadomieniu'},
-  'about': {'de': 'Über die App', 'en': 'About', 'fr': 'À propos', 'es': 'Acerca de', 'pl': 'O aplikacji'},
-  'aboutVersion': {'de': 'Version', 'en': 'Version', 'fr': 'Version', 'es': 'Versión', 'pl': 'Wersja'},
-  'aboutCredits': {'de': 'Entwickelt für die FiveM-Community.', 'en': 'Built for the FiveM community.', 'fr': 'Conçu pour la communauté FiveM.', 'es': 'Creado para la comunidad de FiveM.', 'pl': 'Stworzone dla społeczności FiveM.'},
-  'aboutContact': {'de': 'Fehler gefunden? Melde dich gerne beim Entwickler.', 'en': 'Found a bug? Feel free to reach out to the developer.', 'fr': "Un bug ? N'hésitez pas à contacter le développeur.", 'es': '¿Encontraste un error? No dudes en contactar al desarrollador.', 'pl': 'Znalazłeś błąd? Skontaktuj się z deweloperem.'},
+  'appName': {'de': 'Fserver', 'en': 'Fserver', 'fr': 'Fserver', 'es': 'Fserver', 'pl': 'Fserver', 'it': 'Fserver', 'pt': 'Fserver', 'nl': 'Fserver', 'tr': 'Fserver'},
+  'serverList': {'de': 'Serverliste', 'en': 'Server list', 'fr': 'Liste des serveurs', 'es': 'Lista de servidores', 'pl': 'Lista serwerów', 'it': 'Lista server', 'pt': 'Lista de servidores', 'nl': 'Serverlijst', 'tr': 'Sunucu listesi'},
+  'favorites': {'de': 'Favoriten', 'en': 'Favorites', 'fr': 'Favoris', 'es': 'Favoritos', 'pl': 'Ulubione', 'it': 'Preferiti', 'pt': 'Favoritos', 'nl': 'Favorieten', 'tr': 'Favoriler'},
+  'favoritesSubtitle': {'de': 'Deine gespeicherten Server', 'en': 'Your saved servers', 'fr': 'Vos serveurs enregistrés', 'es': 'Tus servidores guardados', 'pl': 'Twoje zapisane serwery', 'it': 'I tuoi server salvati', 'pt': 'Seus servidores salvos', 'nl': 'Je opgeslagen servers', 'tr': 'Kaydettiğin sunucular'},
+  'serverListSubtitle': {'de': 'Alle Server durchsuchen', 'en': 'Browse all servers', 'fr': 'Parcourir tous les serveurs', 'es': 'Explorar todos los servidores', 'pl': 'Przeglądaj wszystkie serwery', 'it': 'Sfoglia tutti i server', 'pt': 'Explore todos os servidores', 'nl': 'Blader door alle servers', 'tr': 'Tüm sunuculara göz at'},
+  'settings': {'de': 'Einstellungen', 'en': 'Settings', 'fr': 'Paramètres', 'es': 'Ajustes', 'pl': 'Ustawienia', 'it': 'Impostazioni', 'pt': 'Configurações', 'nl': 'Instellingen', 'tr': 'Ayarlar'},
+  'search': {'de': 'Server suchen', 'en': 'Search servers', 'fr': 'Rechercher un serveur', 'es': 'Buscar servidores', 'pl': 'Szukaj serwerów', 'it': 'Cerca server', 'pt': 'Pesquisar servidores', 'nl': 'Servers zoeken', 'tr': 'Sunucu ara'},
+  'retry': {'de': 'Erneut versuchen', 'en': 'Retry', 'fr': 'Réessayer', 'es': 'Reintentar', 'pl': 'Spróbuj ponownie', 'it': 'Riprova', 'pt': 'Tentar novamente', 'nl': 'Opnieuw proberen', 'tr': 'Yeniden dene'},
+  'noServersFound': {'de': 'Keine Server gefunden.', 'en': 'No servers found.', 'fr': 'Aucun serveur trouvé.', 'es': 'No se encontraron servidores.', 'pl': 'Nie znaleziono serwerów.', 'it': 'Nessun server trovato.', 'pt': 'Nenhum servidor encontrado.', 'nl': 'Geen servers gevonden.', 'tr': 'Sunucu bulunamadı.'},
+  'noFavoritesYet': {'de': 'Noch keine Favoriten. Tippe auf den Stern in einem Serverprofil.', 'en': 'No favorites yet. Tap the star on a server profile.', 'fr': "Pas encore de favoris. Appuyez sur l'étoile dans le profil d'un serveur.", 'es': 'Aún no hay favoritos. Toca la estrella en el perfil de un servidor.', 'pl': 'Brak ulubionych. Stuknij gwiazdkę w profilu serwera.', 'it': 'Nessun preferito ancora. Tocca la stella sul profilo di un server.', 'pt': 'Ainda sem favoritos. Toque na estrela no perfil de um servidor.', 'nl': 'Nog geen favorieten. Tik op de ster bij een serverprofiel.', 'tr': 'Henüz favori yok. Bir sunucu profilindeki yıldıza dokun.'},
+  'loading': {'de': 'Lade komplette Serverliste…\ndas kann bis zu 30 Sekunden dauern', 'en': 'Loading full server list…\nthis can take up to 30 seconds', 'fr': 'Chargement de la liste complète des serveurs…\ncela peut prendre jusqu\'à 30 secondes', 'es': 'Cargando la lista completa de servidores…\npuede tardar hasta 30 segundos', 'pl': 'Ładowanie pełnej listy serwerów…\nmoże to potrwać do 30 sekund', 'it': 'Caricamento della lista completa dei server…\\npuò richiedere fino a 30 secondi', 'pt': 'Carregando a lista completa de servidores…\\npode levar até 30 segundos', 'nl': 'Volledige serverlijst laden…\\ndit kan tot 30 seconden duren', 'tr': 'Tam sunucu listesi yükleniyor…\\nbu işlem 30 saniyeye kadar sürebilir'},
+  'hideEmpty': {'de': 'Leere ausblenden', 'en': 'Hide empty', 'fr': 'Masquer les vides', 'es': 'Ocultar vacíos', 'pl': 'Ukryj puste', 'it': 'Nascondi vuoti', 'pt': 'Ocultar vazios', 'nl': 'Lege verbergen', 'tr': 'Boşları gizle'},
+  'hideFull': {'de': 'Volle ausblenden', 'en': 'Hide full', 'fr': 'Masquer les pleins', 'es': 'Ocultar llenos', 'pl': 'Ukryj pełne', 'it': 'Nascondi pieni', 'pt': 'Ocultar cheios', 'nl': 'Volle verbergen', 'tr': 'Doluları gizle'},
+  'country': {'de': 'Land', 'en': 'Country', 'fr': 'Pays', 'es': 'País', 'pl': 'Kraj', 'it': 'Paese', 'pt': 'País', 'nl': 'Land', 'tr': 'Ülke'},
+  'tagsHint': {'de': 'Tags (1x einschließen, 2x ausschließen)', 'en': 'Tags (tap once to include, twice to exclude)', 'fr': 'Tags (appuyez une fois pour inclure, deux fois pour exclure)', 'es': 'Etiquetas (toca una vez para incluir, dos para excluir)', 'pl': 'Tagi (dotknij raz, aby uwzględnić, dwa razy, aby wykluczyć)', 'it': 'Tag (tocca una volta per includere, due per escludere)', 'pt': 'Tags (toque uma vez para incluir, duas para excluir)', 'nl': 'Tags (één keer tikken om op te nemen, twee keer om uit te sluiten)', 'tr': 'Etiketler (dahil etmek için bir, hariç tutmak için iki kez dokun)'},
+  'join': {'de': 'Beitreten', 'en': 'Join', 'fr': 'Rejoindre', 'es': 'Unirse', 'pl': 'Dołącz', 'it': 'Entra', 'pt': 'Entrar', 'nl': 'Deelnemen', 'tr': 'Katıl'},
+  'copied': {'de': 'Kopiert', 'en': 'Copied', 'fr': 'Copié', 'es': 'Copiado', 'pl': 'Skopiowano', 'it': 'Copiato', 'pt': 'Copiado', 'nl': 'Gekopieerd', 'tr': 'Kopyalandı'},
+  'overview': {'de': 'Übersicht', 'en': 'Overview', 'fr': 'Aperçu', 'es': 'Resumen', 'pl': 'Przegląd', 'it': 'Panoramica', 'pt': 'Visão geral', 'nl': 'Overzicht', 'tr': 'Genel bakış'},
+  'scripts': {'de': 'Scripts', 'en': 'Scripts', 'fr': 'Scripts', 'es': 'Scripts', 'pl': 'Skrypty', 'it': 'Script', 'pt': 'Scripts', 'nl': 'Scripts', 'tr': 'Betikler'},
+  'filterScripts': {'de': 'Script filtern', 'en': 'Filter scripts', 'fr': 'Filtrer les scripts', 'es': 'Filtrar scripts', 'pl': 'Filtruj skrypty', 'it': 'Filtra script', 'pt': 'Filtrar scripts', 'nl': 'Scripts filteren', 'tr': 'Betikleri filtrele'},
+  'noScriptsFound': {'de': 'Keine Scripts gefunden.', 'en': 'No scripts found.', 'fr': 'Aucun script trouvé.', 'es': 'No se encontraron scripts.', 'pl': 'Nie znaleziono skryptów.', 'it': 'Nessuno script trovato.', 'pt': 'Nenhum script encontrado.', 'nl': 'Geen scripts gevonden.', 'tr': 'Betik bulunamadı.'},
+  'gametype': {'de': 'Gametype', 'en': 'Gametype', 'fr': 'Type de jeu', 'es': 'Tipo de juego', 'pl': 'Typ gry', 'it': 'Tipo di gioco', 'pt': 'Tipo de jogo', 'nl': 'Speltype', 'tr': 'Oyun türü'},
+  'map': {'de': 'Map', 'en': 'Map', 'fr': 'Carte', 'es': 'Mapa', 'pl': 'Mapa', 'it': 'Mappa', 'pt': 'Mapa', 'nl': 'Kaart', 'tr': 'Harita'},
+  'players': {'de': 'Spieler', 'en': 'Players', 'fr': 'Joueurs', 'es': 'Jugadores', 'pl': 'Gracze', 'it': 'Giocatori', 'pt': 'Jogadores', 'nl': 'Spelers', 'tr': 'Oyuncular'},
+  'boost': {'de': 'Boost', 'en': 'Boost', 'fr': 'Boost', 'es': 'Boost', 'pl': 'Boost', 'it': 'Boost', 'pt': 'Impulso', 'nl': 'Boost', 'tr': 'Artırma'},
+  'onesync': {'de': 'OneSync', 'en': 'OneSync', 'fr': 'OneSync', 'es': 'OneSync', 'pl': 'OneSync', 'it': 'OneSync', 'pt': 'OneSync', 'nl': 'OneSync', 'tr': 'OneSync'},
+  'active': {'de': 'Aktiv', 'en': 'Active', 'fr': 'Actif', 'es': 'Activo', 'pl': 'Aktywny', 'it': 'Attivo', 'pt': 'Ativo', 'nl': 'Actief', 'tr': 'Aktif'},
+  'inactive': {'de': 'Inaktiv', 'en': 'Inactive', 'fr': 'Inactif', 'es': 'Inactivo', 'pl': 'Nieaktywny', 'it': 'Inattivo', 'pt': 'Inativo', 'nl': 'Inactief', 'tr': 'Pasif'},
+  'build': {'de': 'Build', 'en': 'Build', 'fr': 'Build', 'es': 'Build', 'pl': 'Build', 'it': 'Build', 'pt': 'Build', 'nl': 'Build', 'tr': 'Sürüm'},
+  'language': {'de': 'Sprache', 'en': 'Language', 'fr': 'Langue', 'es': 'Idioma', 'pl': 'Język', 'it': 'Lingua', 'pt': 'Idioma', 'nl': 'Taal', 'tr': 'Dil'},
+  'tags': {'de': 'Tags', 'en': 'Tags', 'fr': 'Tags', 'es': 'Etiquetas', 'pl': 'Tagi', 'it': 'Tag', 'pt': 'Tags', 'nl': 'Tags', 'tr': 'Etiketler'},
+  'onboardingWelcome': {'de': 'Willkommen', 'en': 'Welcome', 'fr': 'Bienvenue', 'es': 'Bienvenido', 'pl': 'Witamy', 'it': 'Benvenuto', 'pt': 'Bem-vindo', 'nl': 'Welkom', 'tr': 'Hoş geldin'},
+  'onboardingLanguage': {'de': 'Wähle deine Sprache', 'en': 'Choose your language', 'fr': 'Choisissez votre langue', 'es': 'Elige tu idioma', 'pl': 'Wybierz swój język', 'it': 'Scegli la tua lingua', 'pt': 'Escolha seu idioma', 'nl': 'Kies je taal', 'tr': 'Dilini seç'},
+  'onboardingTheme': {'de': 'Wähle dein Farbschema', 'en': 'Choose your color scheme', 'fr': 'Choisissez votre thème de couleur', 'es': 'Elige tu esquema de color', 'pl': 'Wybierz swój schemat kolorów', 'it': 'Scegli il tuo tema colore', 'pt': 'Escolha seu esquema de cores', 'nl': 'Kies je kleurenschema', 'tr': 'Renk düzenini seç'},
+  'continueLabel': {'de': 'Weiter', 'en': 'Continue', 'fr': 'Continuer', 'es': 'Continuar', 'pl': 'Dalej', 'it': 'Continua', 'pt': 'Continuar', 'nl': 'Doorgaan', 'tr': 'Devam et'},
+  'getStarted': {'de': 'Los geht\'s', 'en': 'Get started', 'fr': 'Commencer', 'es': 'Comenzar', 'pl': 'Zaczynajmy', 'it': 'Inizia', 'pt': 'Começar', 'nl': 'Aan de slag', 'tr': 'Başla'},
+  'appLanguage': {'de': 'App-Sprache', 'en': 'App language', 'fr': "Langue de l'app", 'es': 'Idioma de la app', 'pl': 'Język aplikacji', 'it': "Lingua dell'app", 'pt': 'Idioma do aplicativo', 'nl': 'Apptaal', 'tr': 'Uygulama dili'},
+  'colorScheme': {'de': 'Farbschema', 'en': 'Color scheme', 'fr': 'Thème de couleur', 'es': 'Esquema de color', 'pl': 'Schemat kolorów', 'it': 'Tema colore', 'pt': 'Esquema de cores', 'nl': 'Kleurenschema', 'tr': 'Renk düzeni'},
+  'notifications': {'de': 'Benachrichtigungen', 'en': 'Notifications', 'fr': 'Notifications', 'es': 'Notificaciones', 'pl': 'Powiadomienia', 'it': 'Notifiche', 'pt': 'Notificações', 'nl': 'Meldingen', 'tr': 'Bildirimler'},
+  'notificationsDesc': {'de': 'Benachrichtigung senden, wenn ein favorisierter Server genug Spieler hat', 'en': 'Notify me when a favorite server has enough players', 'fr': "M'avertir quand un serveur favori a assez de joueurs", 'es': 'Avisarme cuando un servidor favorito tenga suficientes jugadores', 'pl': 'Powiadom mnie, gdy ulubiony serwer ma wystarczająco graczy', 'it': 'Avvisami quando un server preferito ha abbastanza giocatori', 'pt': 'Avise-me quando um servidor favorito tiver jogadores suficientes', 'nl': 'Waarschuw me als een favoriete server genoeg spelers heeft', 'tr': 'Favori bir sunucuda yeterince oyuncu olduğunda bana bildir'},
+  'notificationThreshold': {'de': 'Ab wie vielen Spielern benachrichtigen', 'en': 'Notify from this many players', 'fr': 'Notifier à partir de ce nombre de joueurs', 'es': 'Notificar a partir de esta cantidad de jugadores', 'pl': 'Powiadamiaj od tylu graczy', 'it': 'Avvisa a partire da questo numero di giocatori', 'pt': 'Notificar a partir desta quantidade de jogadores', 'nl': 'Waarschuw vanaf dit aantal spelers', 'tr': 'Bu kadar oyuncudan itibaren bildir'},
+  'favoriteThreshold': {'de': 'Schwelle für diesen Server', 'en': 'Threshold for this server', 'fr': 'Seuil pour ce serveur', 'es': 'Umbral para este servidor', 'pl': 'Próg dla tego serwera', 'it': 'Soglia per questo server', 'pt': 'Limite para este servidor', 'nl': 'Drempel voor deze server', 'tr': 'Bu sunucu için eşik'},
+  'favoriteNotifyEnable': {'de': 'Benachrichtigungen für diesen Server', 'en': 'Notifications for this server', 'fr': 'Notifications pour ce serveur', 'es': 'Notificaciones para este servidor', 'pl': 'Powiadomienia dla tego serwera', 'it': 'Notifiche per questo server', 'pt': 'Notificações para este servidor', 'nl': 'Meldingen voor deze server', 'tr': 'Bu sunucu için bildirimler'},
+  'favoriteNotifyThresholdLabel': {'de': 'Ab so vielen Spielern', 'en': 'From this many players', 'fr': 'À partir de ce nombre de joueurs', 'es': 'A partir de esta cantidad de jugadores', 'pl': 'Od tylu graczy', 'it': 'A partire da questo numero di giocatori', 'pt': 'A partir desta quantidade de jogadores', 'nl': 'Vanaf dit aantal spelers', 'tr': 'Bu kadar oyuncudan itibaren'},
+  'clearCache': {'de': 'App-Cache leeren', 'en': 'Clear app cache', 'fr': "Vider le cache de l'app", 'es': 'Borrar caché de la app', 'pl': 'Wyczyść pamięć podręczną aplikacji', 'it': "Svuota la cache dell'app", 'pt': 'Limpar cache do aplicativo', 'nl': 'App-cache wissen', 'tr': 'Uygulama önbelleğini temizle'},
+  'cacheCleared': {'de': 'Cache geleert', 'en': 'Cache cleared', 'fr': 'Cache vidé', 'es': 'Caché borrada', 'pl': 'Pamięć podręczna wyczyszczona', 'it': 'Cache svuotata', 'pt': 'Cache limpo', 'nl': 'Cache gewist', 'tr': 'Önbellek temizlendi'},
+  'useDefaultThreshold': {'de': 'Standard verwenden', 'en': 'Use default', 'fr': 'Utiliser la valeur par défaut', 'es': 'Usar valor predeterminado', 'pl': 'Użyj domyślnej', 'it': 'Usa predefinito', 'pt': 'Usar padrão', 'nl': 'Standaard gebruiken', 'tr': 'Varsayılanı kullan'},
+  'notificationSound': {'de': 'Benachrichtigungston', 'en': 'Notification sound', 'fr': 'Son de notification', 'es': 'Sonido de notificación', 'pl': 'Dźwięk powiadomienia', 'it': 'Suono di notifica', 'pt': 'Som de notificação', 'nl': 'Meldingsgeluid', 'tr': 'Bildirim sesi'},
+  'soundDefault': {'de': 'Standard', 'en': 'Default', 'fr': 'Par défaut', 'es': 'Predeterminado', 'pl': 'Domyślny', 'it': 'Predefinito', 'pt': 'Padrão', 'nl': 'Standaard', 'tr': 'Varsayılan'},
+  'soundChime': {'de': 'Glockenspiel', 'en': 'Chime', 'fr': 'Carillon', 'es': 'Campanilla', 'pl': 'Dzwonek', 'it': 'Carillon', 'pt': 'Sininho', 'nl': 'Belletje', 'tr': 'Çan sesi'},
+  'soundBell': {'de': 'Glocke', 'en': 'Bell', 'fr': 'Cloche', 'es': 'Campana', 'pl': 'Dzwon', 'it': 'Campana', 'pt': 'Sino', 'nl': 'Bel', 'tr': 'Zil'},
+  'tutorialServerListTitle': {'de': 'Serverliste', 'en': 'Server list', 'fr': 'Liste des serveurs', 'es': 'Lista de servidores', 'pl': 'Lista serwerów', 'it': 'Lista server', 'pt': 'Lista de servidores', 'nl': 'Serverlijst', 'tr': 'Sunucu listesi'},
+  'tutorialServerListDesc': {'de': 'Hier findest du alle FiveM-Server, kannst filtern, sortieren und suchen.', 'en': 'Browse every FiveM server here, with filtering, sorting and search.', 'fr': 'Parcourez ici tous les serveurs FiveM, avec filtres, tri et recherche.', 'es': 'Explora aquí todos los servidores FiveM, con filtros, orden y búsqueda.', 'pl': 'Tutaj znajdziesz wszystkie serwery FiveM z filtrowaniem, sortowaniem i wyszukiwaniem.', 'it': 'Sfoglia qui tutti i server FiveM, con filtri, ordinamento e ricerca.', 'pt': 'Explore aqui todos os servidores FiveM, com filtros, ordenação e busca.', 'nl': 'Blader hier door alle FiveM-servers, met filters, sorteren en zoeken.', 'tr': 'Tüm FiveM sunucularına burada göz at; filtreleme, sıralama ve arama ile.'},
+  'tutorialFavoritesTitle': {'de': 'Favoriten', 'en': 'Favorites', 'fr': 'Favoris', 'es': 'Favoritos', 'pl': 'Ulubione', 'it': 'Preferiti', 'pt': 'Favoritos', 'nl': 'Favorieten', 'tr': 'Favoriler'},
+  'tutorialFavoritesDesc': {'de': 'Markiere Server als Favorit, um Benachrichtigungen zu erhalten, wenn sie online gehen oder genug Spieler haben.', 'en': 'Star a server as favorite to get notified when it comes online or reaches enough players.', 'fr': 'Marquez un serveur comme favori pour être averti quand il est en ligne ou atteint assez de joueurs.', 'es': 'Marca un servidor como favorito para recibir avisos cuando esté en línea o tenga suficientes jugadores.', 'pl': 'Oznacz serwer jako ulubiony, aby otrzymać powiadomienie, gdy będzie online lub ma wystarczająco graczy.', 'it': 'Aggiungi un server ai preferiti per essere avvisato quando torna online o raggiunge abbastanza giocatori.', 'pt': 'Marque um servidor como favorito para ser avisado quando ele ficar online ou tiver jogadores suficientes.', 'nl': 'Markeer een server als favoriet om een melding te krijgen als deze online komt of genoeg spelers heeft.', 'tr': 'Çevrimiçi olduğunda veya yeterince oyuncuya ulaştığında bildirim almak için bir sunucuyu favori olarak işaretle.'},
+  'tutorialSettingsTitle': {'de': 'Einstellungen', 'en': 'Settings', 'fr': 'Paramètres', 'es': 'Ajustes', 'pl': 'Ustawienia', 'it': 'Impostazioni', 'pt': 'Configurações', 'nl': 'Instellingen', 'tr': 'Ayarlar'},
+  'tutorialSettingsDesc': {'de': 'Sprache, Design, Textgröße, Sounds und Benachrichtigungen kannst du hier anpassen.', 'en': 'Adjust language, theme, text size, sounds and notifications here.', 'fr': "Ajustez ici la langue, le thème, la taille du texte, les sons et les notifications.", 'es': 'Ajusta aquí el idioma, el tema, el tamaño del texto, los sonidos y las notificaciones.', 'pl': 'Dostosuj tutaj język, motyw, rozmiar tekstu, dźwięki i powiadomienia.', 'it': 'Qui puoi regolare lingua, tema, dimensione del testo, suoni e notifiche.', 'pt': 'Ajuste aqui idioma, tema, tamanho do texto, sons e notificações.', 'nl': 'Pas hier taal, thema, tekstgrootte, geluiden en meldingen aan.', 'tr': 'Dil, tema, yazı boyutu, sesler ve bildirimleri buradan ayarla.'},
+  'tutorialNext': {'de': 'Weiter', 'en': 'Next', 'fr': 'Suivant', 'es': 'Siguiente', 'pl': 'Dalej', 'it': 'Avanti', 'pt': 'Próximo', 'nl': 'Volgende', 'tr': 'İleri'},
+  'tutorialDone': {'de': 'Fertig', 'en': 'Done', 'fr': 'Terminé', 'es': 'Listo', 'pl': 'Gotowe', 'it': 'Fatto', 'pt': 'Concluído', 'nl': 'Klaar', 'tr': 'Bitti'},
+  'tutorialSkip': {'de': 'Überspringen', 'en': 'Skip', 'fr': 'Passer', 'es': 'Omitir', 'pl': 'Pomiń', 'it': 'Salta', 'pt': 'Pular', 'nl': 'Overslaan', 'tr': 'Atla'},
+  'autoRefresh': {'de': 'Auto-Aktualisierung', 'en': 'Auto-refresh', 'fr': 'Actualisation automatique', 'es': 'Actualización automática', 'pl': 'Automatyczne odświeżanie', 'it': 'Aggiornamento automatico', 'pt': 'Atualização automática', 'nl': 'Automatisch vernieuwen', 'tr': 'Otomatik yenileme'},
+  'autoRefreshDesc': {'de': 'Wie oft sich die Serverliste im Hintergrund selbst aktualisiert', 'en': 'How often the server list refreshes itself automatically', 'fr': 'À quelle fréquence la liste des serveurs se rafraîchit automatiquement', 'es': 'Con qué frecuencia se actualiza automáticamente la lista de servidores', 'pl': 'Jak często lista serwerów odświeża się automatycznie', 'it': 'Ogni quanto la lista dei server si aggiorna automaticamente', 'pt': 'Com que frequência a lista de servidores se atualiza automaticamente', 'nl': 'Hoe vaak de serverlijst zichzelf automatisch vernieuwt', 'tr': 'Sunucu listesinin kendini otomatik olarak ne sıklıkla yenileyeceği'},
+  'uiSounds': {'de': 'Sound', 'en': 'Sound', 'fr': 'Son', 'es': 'Sonido', 'pl': 'Dźwięk', 'it': 'Suono', 'pt': 'Som', 'nl': 'Geluid', 'tr': 'Ses'},
+  'uiSoundsDesc': {'de': 'Sound-Effekte bei Berührungen und beim App-Start abspielen', 'en': 'Play sound effects on taps and at app startup', 'fr': 'Jouer des effets sonores lors des interactions et au démarrage', 'es': 'Reproducir efectos de sonido al tocar y al iniciar la app', 'pl': 'Odtwarzaj dźwięki przy dotknięciach i przy starcie aplikacji', 'it': "Riproduci effetti sonori ai tocchi e all'avvio dell'app", 'pt': 'Reproduzir efeitos sonoros ao tocar e ao iniciar o aplicativo', 'nl': 'Speel geluidseffecten af bij tikken en bij het opstarten van de app', 'tr': 'Dokunuşlarda ve uygulama açılışında ses efektleri çal'},
+  'haptics': {'de': 'Vibration bei Berührung', 'en': 'Haptic feedback', 'fr': 'Retour haptique', 'es': 'Retroalimentación háptica', 'pl': 'Wibracje dotykowe', 'it': 'Feedback tattile', 'pt': 'Feedback tátil', 'nl': 'Haptische feedback', 'tr': 'Dokunsal geri bildirim'},
+  'hapticsDesc': {'de': 'Kurz vibrieren bei Berührungen in der App', 'en': 'Brief vibration on taps within the app', 'fr': 'Légère vibration lors des interactions dans l\'app', 'es': 'Vibración breve al tocar dentro de la app', 'pl': 'Krótka wibracja przy dotknięciach w aplikacji', 'it': "Breve vibrazione ai tocchi nell'app", 'pt': 'Vibração breve ao tocar dentro do aplicativo', 'nl': 'Korte trilling bij tikken in de app', 'tr': 'Uygulama içindeki dokunuşlarda kısa titreşim'},
+  'textSize': {'de': 'Schriftgröße', 'en': 'Text size', 'fr': 'Taille du texte', 'es': 'Tamaño del texto', 'pl': 'Rozmiar tekstu', 'it': 'Dimensione testo', 'pt': 'Tamanho do texto', 'nl': 'Tekstgrootte', 'tr': 'Yazı boyutu'},
+  'textSizeSmall': {'de': 'Klein', 'en': 'Small', 'fr': 'Petit', 'es': 'Pequeño', 'pl': 'Mały', 'it': 'Piccolo', 'pt': 'Pequeno', 'nl': 'Klein', 'tr': 'Küçük'},
+  'textSizeNormal': {'de': 'Normal', 'en': 'Normal', 'fr': 'Normal', 'es': 'Normal', 'pl': 'Normalny', 'it': 'Normale', 'pt': 'Normal', 'nl': 'Normaal', 'tr': 'Normal'},
+  'textSizeLarge': {'de': 'Groß', 'en': 'Large', 'fr': 'Grand', 'es': 'Grande', 'pl': 'Duży', 'it': 'Grande', 'pt': 'Grande', 'nl': 'Groot', 'tr': 'Büyük'},
+  'highContrast': {'de': 'Hoher Kontrast', 'en': 'High contrast', 'fr': 'Contraste élevé', 'es': 'Alto contraste', 'pl': 'Wysoki kontrast', 'it': 'Alto contrasto', 'pt': 'Alto contraste', 'nl': 'Hoog contrast', 'tr': 'Yüksek kontrast'},
+  'highContrastDesc': {'de': 'Kräftigere Farben und besserer Textkontrast für schwächeres Sehen', 'en': 'Bolder colors and stronger text contrast for low vision', 'fr': 'Couleurs plus marquées et meilleur contraste de texte', 'es': 'Colores más fuertes y mejor contraste de texto', 'pl': 'Mocniejsze kolory i lepszy kontrast tekstu', 'it': 'Colori più marcati e maggiore contrasto del testo per la bassa visione', 'pt': 'Cores mais fortes e maior contraste de texto para baixa visão', 'nl': 'Krachtigere kleuren en sterker tekstcontrast voor slechtzienden', 'tr': 'Az görme için daha belirgin renkler ve daha güçlü metin kontrastı'},
+  'favoriteOfflineTitle': {'de': 'Server offline', 'en': 'Server offline', 'fr': 'Serveur hors ligne', 'es': 'Servidor fuera de línea', 'pl': 'Serwer offline', 'it': 'Server offline', 'pt': 'Servidor offline', 'nl': 'Server offline', 'tr': 'Sunucu çevrimdışı'},
+  'favoriteOfflineBody': {'de': '{name} ist nicht mehr erreichbar', 'en': '{name} is no longer reachable', 'fr': '{name} n\'est plus accessible', 'es': '{name} ya no está disponible', 'pl': '{name} jest niedostępny', 'it': '{name} non è più raggiungibile', 'pt': '{name} não está mais acessível', 'nl': '{name} is niet meer bereikbaar', 'tr': '{name} artık ulaşılamıyor'},
+  'favoriteOnlineTitle': {'de': 'Server wieder online', 'en': 'Server back online', 'fr': 'Serveur de nouveau en ligne', 'es': 'Servidor de nuevo en línea', 'pl': 'Serwer znowu online', 'it': 'Server di nuovo online', 'pt': 'Servidor online novamente', 'nl': 'Server weer online', 'tr': 'Sunucu tekrar çevrimiçi'},
+  'favoriteOnlineBody': {'de': '{name} ist wieder erreichbar', 'en': '{name} is reachable again', 'fr': '{name} est de nouveau accessible', 'es': '{name} está disponible de nuevo', 'pl': '{name} jest znowu dostępny', 'it': '{name} è di nuovo raggiungibile', 'pt': '{name} está acessível novamente', 'nl': '{name} is weer bereikbaar', 'tr': '{name} tekrar ulaşılabilir durumda'},
+  'favoriteThresholdBody': {'de': 'hat gerade {clients} Spieler', 'en': 'has {clients} players right now', 'fr': 'a {clients} joueurs en ce moment', 'es': 'tiene {clients} jugadores ahora', 'pl': 'ma teraz {clients} graczy', 'it': 'ha {clients} giocatori in questo momento', 'pt': 'tem {clients} jogadores agora', 'nl': 'heeft nu {clients} spelers', 'tr': 'şu anda {clients} oyuncuya sahip'},
+  'newBadge': {'de': 'NEU', 'en': 'NEW', 'fr': 'NOUVEAU', 'es': 'NUEVO', 'pl': 'NOWY', 'it': 'NUOVO', 'pt': 'NOVO', 'nl': 'NIEUW', 'tr': 'YENİ'},
+  'back': {'de': 'Zurück', 'en': 'Back', 'fr': 'Retour', 'es': 'Atrás', 'pl': 'Wstecz', 'it': 'Indietro', 'pt': 'Voltar', 'nl': 'Terug', 'tr': 'Geri'},
+  'unreachable': {'de': 'Live-Details nicht erreichbar', 'en': 'Live details unreachable', 'fr': 'Détails en direct indisponibles', 'es': 'Detalles en vivo no disponibles', 'pl': 'Brak dostępu do szczegółów na żywo', 'it': 'Dettagli live non disponibili', 'pt': 'Detalhes em tempo real indisponíveis', 'nl': 'Live-details niet beschikbaar', 'tr': 'Canlı bilgilere ulaşılamıyor'},
+  'topServersNearYou': {'de': 'Top 3 in deiner Region', 'en': 'Top 3 in your region', 'fr': 'Top 3 dans ta région', 'es': 'Top 3 en tu región', 'pl': 'Top 3 w Twoim regionie', 'it': 'Top 3 nella tua regione', 'pt': 'Top 3 na sua região', 'nl': 'Top 3 in jouw regio', 'tr': 'Bölgende ilk 3'},
+  'searchHistoryTitle': {'de': 'Suchverlauf', 'en': 'Search history', 'fr': 'Historique de recherche', 'es': 'Historial de búsqueda', 'pl': 'Historia wyszukiwania', 'it': 'Cronologia ricerche', 'pt': 'Histórico de pesquisa', 'nl': 'Zoekgeschiedenis', 'tr': 'Arama geçmişi'},
+  'searchHistorySubtitle': {'de': 'Deine letzten Suchanfragen', 'en': 'Your recent searches', 'fr': 'Vos recherches récentes', 'es': 'Tus búsquedas recientes', 'pl': 'Twoje ostatnie wyszukiwania', 'it': 'Le tue ricerche recenti', 'pt': 'Suas pesquisas recentes', 'nl': 'Je recente zoekopdrachten', 'tr': 'Son aramaların'},
+  'noSearchHistory': {'de': 'Noch keine Suchanfragen.', 'en': 'No searches yet.', 'fr': 'Aucune recherche pour le moment.', 'es': 'Aún no hay búsquedas.', 'pl': 'Brak wyszukiwań.', 'it': 'Nessuna ricerca ancora.', 'pt': 'Ainda sem pesquisas.', 'nl': 'Nog geen zoekopdrachten.', 'tr': 'Henüz arama yok.'},
+  'clearHistory': {'de': 'Verlauf leeren', 'en': 'Clear history', 'fr': "Effacer l'historique", 'es': 'Borrar historial', 'pl': 'Wyczyść historię', 'it': 'Svuota cronologia', 'pt': 'Limpar histórico', 'nl': 'Geschiedenis wissen', 'tr': 'Geçmişi temizle'},
+  'topRegionTitle': {'de': 'Top 10 in deiner Region', 'en': 'Top 10 in your region', 'fr': 'Top 10 dans ta région', 'es': 'Top 10 en tu región', 'pl': 'Top 10 w Twoim regionie', 'it': 'Top 10 nella tua regione', 'pt': 'Top 10 na sua região', 'nl': 'Top 10 in jouw regio', 'tr': 'Bölgende ilk 10'},
+  'topRegionSubtitle': {'de': 'Beste Server nach Boost', 'en': 'Best servers by boost', 'fr': 'Meilleurs serveurs par boost', 'es': 'Mejores servidores por impulso', 'pl': 'Najlepsze serwery według boostu', 'it': 'Migliori server per boost', 'pt': 'Melhores servidores por impulso', 'nl': 'Beste servers op boost', 'tr': 'Artırmaya göre en iyi sunucular'},
+  'tutorialSearchHistoryDesc': {'de': 'Hier siehst du deine letzten 50 Suchanfragen und kannst sie mit der Mülltonne löschen.', 'en': 'See your last 50 searches here and clear them with the trash icon.', 'fr': "Retrouvez ici vos 50 dernières recherches et effacez-les avec l'icône de corbeille.", 'es': 'Aquí ves tus últimas 50 búsquedas y puedes borrarlas con el icono de papelera.', 'pl': 'Tutaj zobaczysz swoje ostatnie 50 wyszukiwań i możesz je wyczyścić ikoną kosza.', 'it': 'Qui trovi le tue ultime 50 ricerche e puoi eliminarle con l\'icona del cestino.', 'pt': 'Aqui você vê suas últimas 50 pesquisas e pode limpá-las com o ícone de lixeira.', 'nl': 'Hier zie je je laatste 50 zoekopdrachten en kun je ze wissen met het prullenbakicoon.', 'tr': 'Son 50 aramanı burada görebilir ve çöp kutusu simgesiyle temizleyebilirsin.'},
+  'tutorialTopRegionDesc': {'de': 'Die 10 beliebtesten Server in deiner Region, sortiert nach Boost.', 'en': 'The 10 most popular servers in your region, sorted by boost.', 'fr': 'Les 10 serveurs les plus populaires de ta région, triés par boost.', 'es': 'Los 10 servidores más populares de tu región, ordenados por impulso.', 'pl': '10 najpopularniejszych serwerów w Twoim regionie, sortowane według boostu.', 'it': 'I 10 server più popolari della tua regione, ordinati per boost.', 'pt': 'Os 10 servidores mais populares da sua região, ordenados por impulso.', 'nl': 'De 10 populairste servers in jouw regio, gesorteerd op boost.', 'tr': 'Bölgendeki en popüler 10 sunucu, artırmaya göre sıralanmış.'},
+  'themeLight': {'de': 'Hell', 'en': 'Light', 'fr': 'Clair', 'es': 'Claro', 'pl': 'Jasny', 'it': 'Chiaro', 'pt': 'Claro', 'nl': 'Licht', 'tr': 'Açık'},
+  'themeDark': {'de': 'Dunkel', 'en': 'Dark', 'fr': 'Sombre', 'es': 'Oscuro', 'pl': 'Ciemny', 'it': 'Scuro', 'pt': 'Escuro', 'nl': 'Donker', 'tr': 'Koyu'},
+  'themeAuto': {'de': 'Automatisch', 'en': 'Automatic', 'fr': 'Automatique', 'es': 'Automático', 'pl': 'Automatyczny', 'it': 'Automatico', 'pt': 'Automático', 'nl': 'Automatisch', 'tr': 'Otomatik'},
+  'sortBy': {'de': 'Sortierung', 'en': 'Sort by', 'fr': 'Trier par', 'es': 'Ordenar por', 'pl': 'Sortowanie', 'it': 'Ordina per', 'pt': 'Ordenar por', 'nl': 'Sorteren op', 'tr': 'Sıralama'},
+  'sortDefault': {'de': 'Standard', 'en': 'Default', 'fr': 'Par défaut', 'es': 'Predeterminado', 'pl': 'Domyślne', 'it': 'Predefinito', 'pt': 'Padrão', 'nl': 'Standaard', 'tr': 'Varsayılan'},
+  'sortMostPlayers': {'de': 'Meiste Spieler', 'en': 'Most players', 'fr': 'Plus de joueurs', 'es': 'Más jugadores', 'pl': 'Najwięcej graczy', 'it': 'Più giocatori', 'pt': 'Mais jogadores', 'nl': 'Meeste spelers', 'tr': 'En çok oyuncu'},
+  'sortMostBoost': {'de': 'Höchster Boost', 'en': 'Highest boost', 'fr': 'Boost le plus élevé', 'es': 'Más boost', 'pl': 'Najwyższy boost', 'it': 'Boost più alto', 'pt': 'Maior impulso', 'nl': 'Hoogste boost', 'tr': 'En yüksek artırma'},
+  'playerRange': {'de': 'Spieleranzahl', 'en': 'Player count', 'fr': 'Nombre de joueurs', 'es': 'Número de jugadores', 'pl': 'Liczba graczy', 'it': 'Numero di giocatori', 'pt': 'Número de jogadores', 'nl': 'Aantal spelers', 'tr': 'Oyuncu sayısı'},
+  'share': {'de': 'Teilen', 'en': 'Share', 'fr': 'Partager', 'es': 'Compartir', 'pl': 'Udostępnij', 'it': 'Condividi', 'pt': 'Compartilhar', 'nl': 'Delen', 'tr': 'Paylaş'},
+  'vibration': {'de': 'Vibration', 'en': 'Vibration', 'fr': 'Vibration', 'es': 'Vibración', 'pl': 'Wibracje', 'it': 'Vibrazione', 'pt': 'Vibração', 'nl': 'Trilling', 'tr': 'Titreşim'},
+  'vibrationDesc': {'de': 'Bei Benachrichtigung vibrieren', 'en': 'Vibrate on notification', 'fr': 'Vibrer lors d\'une notification', 'es': 'Vibrar con la notificación', 'pl': 'Wibruj przy powiadomieniu', 'it': 'Vibra alla notifica', 'pt': 'Vibrar na notificação', 'nl': 'Trillen bij melding', 'tr': 'Bildirimde titret'},
+  'about': {'de': 'Über die App', 'en': 'About', 'fr': 'À propos', 'es': 'Acerca de', 'pl': 'O aplikacji', 'it': 'Informazioni', 'pt': 'Sobre', 'nl': 'Over', 'tr': 'Hakkında'},
+  'aboutVersion': {'de': 'Version', 'en': 'Version', 'fr': 'Version', 'es': 'Versión', 'pl': 'Wersja', 'it': 'Versione', 'pt': 'Versão', 'nl': 'Versie', 'tr': 'Sürüm'},
+  'aboutCredits': {'de': 'Entwickelt für die FiveM-Community.', 'en': 'Built for the FiveM community.', 'fr': 'Conçu pour la communauté FiveM.', 'es': 'Creado para la comunidad de FiveM.', 'pl': 'Stworzone dla społeczności FiveM.', 'it': 'Creato per la community di FiveM.', 'pt': 'Criado para a comunidade FiveM.', 'nl': 'Gemaakt voor de FiveM-community.', 'tr': 'FiveM topluluğu için geliştirildi.'},
+  'aboutContact': {'de': 'Fehler gefunden? Melde dich gerne beim Entwickler.', 'en': 'Found a bug? Feel free to reach out to the developer.', 'fr': "Un bug ? N'hésitez pas à contacter le développeur.", 'es': '¿Encontraste un error? No dudes en contactar al desarrollador.', 'pl': 'Znalazłeś błąd? Skontaktuj się z deweloperem.', 'it': 'Hai trovato un bug? Contatta pure lo sviluppatore.', 'pt': 'Encontrou um bug? Sinta-se à vontade para contatar o desenvolvedor.', 'nl': 'Bug gevonden? Neem gerust contact op met de ontwikkelaar.', 'tr': 'Bir hata mı buldun? Geliştiriciyle iletişime geçmekten çekinme.'},
 };
 
 const Map<String, String> kLanguageNames = {
@@ -186,6 +199,10 @@ const Map<String, String> kLanguageNames = {
   'fr': 'Français',
   'es': 'Español',
   'pl': 'Polski',
+  'it': 'Italiano',
+  'pt': 'Português',
+  'nl': 'Nederlands',
+  'tr': 'Türkçe',
 };
 
 const Map<String, String> kLanguageFlags = {
@@ -194,6 +211,10 @@ const Map<String, String> kLanguageFlags = {
   'fr': '🇫🇷',
   'es': '🇪🇸',
   'pl': '🇵🇱',
+  'it': '🇮🇹',
+  'pt': '🇵🇹',
+  'nl': '🇳🇱',
+  'tr': '🇹🇷',
 };
 
 String tr(String key) {
@@ -211,9 +232,9 @@ class AppState extends ChangeNotifier {
 
   String language = 'de';
   String themeMode = 'dark';
-  bool notificationsEnabled = false;
   bool notificationVibration = true;
-  int notificationThreshold = 10;
+  // Presence of a code in this map means notifications are enabled for
+  // that favorite; the value is its player-count threshold (1-2000).
   Map<String, int> favoriteThresholds = {};
   String notificationSound = 'default';
   int refreshIntervalMinutes = 5;
@@ -244,12 +265,10 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     language = prefs.getString('language') ?? _detectDeviceLanguage();
     themeMode = _migrateThemeMode(prefs.getString('themeMode') ?? prefs.getString('themeKey') ?? 'dark');
-    notificationsEnabled = prefs.getBool('notificationsEnabled') ?? false;
     notificationVibration = prefs.getBool('notificationVibration') ?? true;
-    notificationThreshold = prefs.getInt('notificationThreshold') ?? 10;
     favoriteThresholds = {
       for (final entry in prefs.getStringList('favoriteThresholds') ?? const [])
-        if (entry.contains(':')) entry.split(':').first: int.tryParse(entry.split(':').last) ?? notificationThreshold,
+        if (entry.contains(':')) entry.split(':').first: int.tryParse(entry.split(':').last) ?? 10,
     };
     notificationSound = prefs.getString('notificationSound') ?? 'default';
     refreshIntervalMinutes = prefs.getInt('refreshIntervalMinutes') ?? 5;
@@ -267,9 +286,7 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language', language);
     await prefs.setString('themeMode', themeMode);
-    await prefs.setBool('notificationsEnabled', notificationsEnabled);
     await prefs.setBool('notificationVibration', notificationVibration);
-    await prefs.setInt('notificationThreshold', notificationThreshold);
     await prefs.setStringList('favoriteThresholds', [for (final e in favoriteThresholds.entries) '${e.key}:${e.value}']);
     await prefs.setString('notificationSound', notificationSound);
     await prefs.setInt('refreshIntervalMinutes', refreshIntervalMinutes);
@@ -288,7 +305,13 @@ class AppState extends ChangeNotifier {
     if (trimmed.isEmpty) return;
     searchHistory.removeWhere((t) => t.toLowerCase() == trimmed.toLowerCase());
     searchHistory.insert(0, trimmed);
-    if (searchHistory.length > 5) searchHistory = searchHistory.sublist(0, 5);
+    if (searchHistory.length > 50) searchHistory = searchHistory.sublist(0, 50);
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> clearSearchHistory() async {
+    searchHistory = [];
     notifyListeners();
     await _persist();
   }
@@ -301,18 +324,6 @@ class AppState extends ChangeNotifier {
 
   Future<void> setThemeMode(String mode) async {
     themeMode = mode;
-    notifyListeners();
-    await _persist();
-  }
-
-  Future<void> setNotificationsEnabled(bool value) async {
-    notificationsEnabled = value;
-    notifyListeners();
-    await _persist();
-  }
-
-  Future<void> setNotificationThreshold(int value) async {
-    notificationThreshold = value;
     notifyListeners();
     await _persist();
   }
@@ -373,14 +384,23 @@ class AppState extends ChangeNotifier {
 
   bool isFavorite(String code) => favorites.contains(code);
 
-  int thresholdFor(String code) => favoriteThresholds[code] ?? notificationThreshold;
+  bool isFavoriteNotifyEnabled(String code) => favoriteThresholds.containsKey(code);
 
-  Future<void> setFavoriteThreshold(String code, int? value) async {
-    if (value == null) {
-      favoriteThresholds.remove(code);
+  int favoriteNotifyThreshold(String code) => favoriteThresholds[code] ?? 10;
+
+  Future<void> setFavoriteNotifyEnabled(String code, bool enabled) async {
+    if (enabled) {
+      favoriteThresholds[code] = favoriteThresholds[code] ?? 10;
     } else {
-      favoriteThresholds[code] = value;
+      favoriteThresholds.remove(code);
     }
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> setFavoriteNotifyThreshold(String code, int value) async {
+    if (!favoriteThresholds.containsKey(code)) return;
+    favoriteThresholds[code] = value;
     notifyListeners();
     await _persist();
   }
@@ -432,6 +452,29 @@ class SoundService {
       await _previewPlayer.play(AssetSource('sounds/notif_$sound.wav'), volume: 0.8);
     } catch (_) {
       // Best-effort only.
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Home screen widget (Android) - shows up to 4 favorite servers with their
+// player counts. Native side lives in android_widget/ (copied into the
+// CI-generated android/ project) since it can't be Dart/Flutter code.
+// ---------------------------------------------------------------------------
+
+class WidgetService {
+  static const _providerName = 'FavoritesWidgetProvider';
+
+  static Future<void> pushFavorites(List<GameServer> favoriteServers) async {
+    try {
+      final entries = favoriteServers.take(4).map((s) => {
+            'name': s.hostname,
+            'players': '${fmtNum(s.clients)}/${fmtNum(s.svMaxclients)}',
+          }).toList();
+      await HomeWidget.saveWidgetData<String>('favoritesJson', jsonEncode(entries));
+      await HomeWidget.updateWidget(name: _providerName);
+    } catch (_) {
+      // Best-effort only - a missing widget/host device shouldn't crash anything.
     }
   }
 }
@@ -516,13 +559,13 @@ void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final enabled = prefs.getBool('notificationsEnabled') ?? false;
       final favorites = prefs.getStringList('favorites') ?? const [];
-      if (!enabled || favorites.isEmpty) return true;
-      final threshold = prefs.getInt('notificationThreshold') ?? 10;
+      if (favorites.isEmpty) return true;
+      // Presence in favoriteThresholds means notifications are enabled for
+      // that favorite; there's no global on/off switch anymore.
       final favoriteThresholds = <String, int>{
         for (final entry in prefs.getStringList('favoriteThresholds') ?? const [])
-          if (entry.contains(':')) entry.split(':').first: int.tryParse(entry.split(':').last) ?? threshold,
+          if (entry.contains(':')) entry.split(':').first: int.tryParse(entry.split(':').last) ?? 10,
       };
       final vibration = prefs.getBool('notificationVibration') ?? true;
       final sound = prefs.getString('notificationSound') ?? 'default';
@@ -550,6 +593,7 @@ void callbackDispatcher() {
       final newTracked = <String>{};
       final newOnline = <String>{};
       final newNames = <String, String>{};
+      final onlineFavoriteServers = <GameServer>[];
 
       for (final code in favorites) {
         final server = byCode[code];
@@ -557,9 +601,13 @@ void callbackDispatcher() {
         newTracked.add(code);
         final displayName = server?.hostname ?? knownNames[code] ?? code;
         newNames[code] = displayName;
-        if (isOnline) newOnline.add(code);
+        if (isOnline) {
+          newOnline.add(code);
+          onlineFavoriteServers.add(server);
+        }
 
-        if (trackedCodes.contains(code)) {
+        final notifyEnabled = favoriteThresholds.containsKey(code);
+        if (notifyEnabled && trackedCodes.contains(code)) {
           final wasOnline = onlineCodes.contains(code);
           if (wasOnline && !isOnline) {
             await _showNotification(
@@ -582,8 +630,8 @@ void callbackDispatcher() {
           }
         }
 
-        final effectiveThreshold = favoriteThresholds[code] ?? threshold;
-        if (isOnline && server.clients >= effectiveThreshold) {
+        final effectiveThreshold = favoriteThresholds[code];
+        if (notifyEnabled && isOnline && server.clients >= (effectiveThreshold ?? 10)) {
           await _showNotification(
             plugin,
             notificationId++,
@@ -598,6 +646,9 @@ void callbackDispatcher() {
       await prefs.setStringList('favoritesTracked', newTracked.toList());
       await prefs.setStringList('favoritesOnlineSnapshot', newOnline.toList());
       await prefs.setStringList('favoritesHostnames', [for (final e in newNames.entries) '${e.key}::${e.value}']);
+
+      onlineFavoriteServers.sort((a, b) => b.upvotePower.compareTo(a.upvotePower));
+      await WidgetService.pushFavorites(onlineFavoriteServers);
     } catch (_) {
       // Best-effort background task - failures shouldn't crash anything.
     }
@@ -1601,7 +1652,8 @@ class CountryFlag extends StatelessWidget {
 enum TagState { neutral, include, exclude }
 
 class ServerListPage extends StatefulWidget {
-  const ServerListPage({super.key});
+  final String? initialSearch;
+  const ServerListPage({super.key, this.initialSearch});
 
   @override
   State<ServerListPage> createState() => _ServerListPageState();
@@ -1642,6 +1694,7 @@ class _ServerListPageState extends State<ServerListPage> {
   void initState() {
     super.initState();
     _load();
+    if (widget.initialSearch != null) _searchCtrl.text = widget.initialSearch!;
     _searchCtrl.addListener(() => setState(() {}));
     _secondsUntilRefresh = _autoRefreshSeconds;
     // A single 1s ticker both drives the countdown display and triggers
@@ -1872,23 +1925,6 @@ class _ServerListPageState extends State<ServerListPage> {
               ],
             ),
           ),
-          if (_searchCtrl.text.isEmpty && AppState.I.searchHistory.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: AppState.I.searchHistory.map((term) {
-                return Pill(
-                  text: term,
-                  leading: Icon(Icons.history, size: 12, color: kFgAlpha(0.5)),
-                  onTap: () {
-                    _searchCtrl.text = term;
-                    _searchCtrl.selection = TextSelection.fromPosition(TextPosition(offset: term.length));
-                  },
-                );
-              }).toList(),
-            ),
-          ],
         ],
       ),
     );
@@ -2368,17 +2404,6 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
     Share.share('${_server.hostname}\n${_server.joinUrl}');
   }
 
-  Widget _detailStepperButton(IconData icon, VoidCallback onTap) {
-    return SoundInkWell(
-      borderRadius: BorderRadius.circular(kRadius),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Icon(icon, size: 15, color: kAccent),
-      ),
-    );
-  }
-
   void _copyAllInfo() {
     final s = _server;
     final lines = [
@@ -2529,48 +2554,6 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                         ),
                       ],
                     ),
-                    if (AppState.I.isFavorite(s.code) && AppState.I.notificationsEnabled) ...[
-                      const SizedBox(height: 8),
-                      GlassPanel(
-                        opacity: 0.08,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${tr('favoriteThreshold')}: ${AppState.I.thresholdFor(s.code)}',
-                                style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.7)),
-                              ),
-                            ),
-                            _detailStepperButton(Icons.remove, () {
-                              final v = (AppState.I.thresholdFor(s.code) - 5).clamp(1, 9999);
-                              AppState.I.setFavoriteThreshold(s.code, v);
-                              setState(() {});
-                            }),
-                            const SizedBox(width: 6),
-                            _detailStepperButton(Icons.add, () {
-                              final v = (AppState.I.thresholdFor(s.code) + 5).clamp(1, 9999);
-                              AppState.I.setFavoriteThreshold(s.code, v);
-                              setState(() {});
-                            }),
-                            if (AppState.I.favoriteThresholds.containsKey(s.code)) ...[
-                              const SizedBox(width: 6),
-                              SoundInkWell(
-                                borderRadius: BorderRadius.circular(kRadius),
-                                onTap: () {
-                                  AppState.I.setFavoriteThreshold(s.code, null);
-                                  setState(() {});
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: Icon(Icons.replay, size: 15, color: kFgAlpha(0.6)),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 4),
                   ],
                 ),
@@ -3171,16 +3154,16 @@ class MainMenuPage extends StatefulWidget {
 }
 
 class _MainMenuPageState extends State<MainMenuPage> {
-  List<GameServer>? _topServers;
   final _serverListKey = GlobalKey();
   final _favoritesKey = GlobalKey();
+  final _historyKey = GlobalKey();
+  final _topRegionKey = GlobalKey();
   final _settingsKey = GlobalKey();
   OverlayEntry? _tutorialEntry;
 
   @override
   void initState() {
     super.initState();
-    _loadTopServers();
     if (!AppState.I.tutorialSeen) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial());
     }
@@ -3191,6 +3174,8 @@ class _MainMenuPageState extends State<MainMenuPage> {
     final steps = [
       TutorialStep(targetKey: _serverListKey, titleKey: 'tutorialServerListTitle', descKey: 'tutorialServerListDesc'),
       TutorialStep(targetKey: _favoritesKey, titleKey: 'tutorialFavoritesTitle', descKey: 'tutorialFavoritesDesc'),
+      TutorialStep(targetKey: _historyKey, titleKey: 'searchHistoryTitle', descKey: 'tutorialSearchHistoryDesc'),
+      TutorialStep(targetKey: _topRegionKey, titleKey: 'topRegionTitle', descKey: 'tutorialTopRegionDesc'),
       TutorialStep(targetKey: _settingsKey, titleKey: 'tutorialSettingsTitle', descKey: 'tutorialSettingsDesc'),
     ];
     _tutorialEntry = OverlayEntry(
@@ -3211,20 +3196,6 @@ class _MainMenuPageState extends State<MainMenuPage> {
     super.dispose();
   }
 
-  Future<void> _loadTopServers() async {
-    try {
-      final servers = await ApiService.fetchTopServers();
-      final region = regionForLanguage(AppState.I.language);
-      final regional = region == null ? servers : servers.where((s) => s.countryGroup == region).toList();
-      final pool = regional.isEmpty ? servers : regional;
-      pool.sort((a, b) => b.upvotePower.compareTo(a.upvotePower));
-      if (!mounted) return;
-      setState(() => _topServers = pool.take(3).toList());
-    } catch (_) {
-      // Best-effort only - the section just stays hidden on failure.
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -3243,56 +3214,63 @@ class _MainMenuPageState extends State<MainMenuPage> {
                     style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -0.3),
                   ),
                   const SizedBox(height: 24),
-                  KeyedSubtree(
-                    key: _serverListKey,
-                    child: _MenuCard(
-                      icon: Icons.dns,
-                      title: tr('serverList'),
-                      subtitle: tr('serverListSubtitle'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ServerListPage()),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          KeyedSubtree(
+                            key: _serverListKey,
+                            child: _MenuCard(
+                              icon: Icons.dns,
+                              title: tr('serverList'),
+                              subtitle: tr('serverListSubtitle'),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const ServerListPage()),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          KeyedSubtree(
+                            key: _favoritesKey,
+                            child: _MenuCard(
+                              icon: Icons.star,
+                              title: tr('favorites'),
+                              subtitle: tr('favoritesSubtitle'),
+                              badge: AppState.I.favorites.isEmpty ? null : '${AppState.I.favorites.length}',
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const FavoritesPage()),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          KeyedSubtree(
+                            key: _historyKey,
+                            child: _MenuCard(
+                              icon: Icons.history,
+                              title: tr('searchHistoryTitle'),
+                              subtitle: tr('searchHistorySubtitle'),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const SearchHistoryPage()),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          KeyedSubtree(
+                            key: _topRegionKey,
+                            child: _MenuCard(
+                              icon: Icons.public,
+                              title: tr('topRegionTitle'),
+                              subtitle: tr('topRegionSubtitle'),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const TopRegionServersPage()),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  KeyedSubtree(
-                    key: _favoritesKey,
-                    child: _MenuCard(
-                      icon: Icons.star,
-                      title: tr('favorites'),
-                      subtitle: tr('favoritesSubtitle'),
-                      badge: AppState.I.favorites.isEmpty ? null : '${AppState.I.favorites.length}',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const FavoritesPage()),
-                      ),
-                    ),
-                  ),
-                  if (_topServers != null && _topServers!.isNotEmpty) ...[
-                    const SizedBox(height: 22),
-                    Text(
-                      tr('topServersNearYou').toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        letterSpacing: 0.6,
-                        fontWeight: FontWeight.w600,
-                        color: kFgAlpha(0.4),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            for (final s in _topServers!) ...[
-                              ServerTile(server: s),
-                              const SizedBox(height: 8),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ] else
-                    const Spacer(),
                   const SizedBox(height: 12),
                   Align(
                     alignment: Alignment.bottomRight,
@@ -3316,6 +3294,216 @@ class _MainMenuPageState extends State<MainMenuPage> {
           ),
         );
       },
+    );
+  }
+}
+
+class SearchHistoryPage extends StatefulWidget {
+  const SearchHistoryPage({super.key});
+
+  @override
+  State<SearchHistoryPage> createState() => _SearchHistoryPageState();
+}
+
+class _SearchHistoryPageState extends State<SearchHistoryPage> {
+  Future<void> _clear() async {
+    await AppState.I.clearSearchHistory();
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final history = AppState.I.searchHistory;
+    return Scaffold(
+      backgroundColor: kBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+              child: Row(
+                children: [
+                  SoundInkWell(
+                    borderRadius: BorderRadius.circular(kRadius),
+                    onTap: () => Navigator.of(context).pop(),
+                    child: GlassPanel(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(Icons.arrow_back, size: 18, color: kFg),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      tr('searchHistoryTitle'),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+                    ),
+                  ),
+                  if (history.isNotEmpty)
+                    SoundInkWell(
+                      borderRadius: BorderRadius.circular(kRadius),
+                      onTap: _clear,
+                      child: GlassPanel(
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: history.isEmpty
+                  ? Center(
+                      child: Text(tr('noSearchHistory'), style: TextStyle(color: kFgAlpha(0.4), fontSize: 13)),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(14, 2, 14, 20),
+                      itemCount: history.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final term = history[index];
+                        return SoundInkWell(
+                          borderRadius: BorderRadius.circular(kRadius),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => ServerListPage(initialSearch: term)),
+                          ),
+                          child: GlassPanel(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            child: Row(
+                              children: [
+                                Icon(Icons.history, size: 16, color: kFgAlpha(0.5)),
+                                const SizedBox(width: 10),
+                                Expanded(child: Text(term, style: const TextStyle(fontSize: 13.5))),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TopRegionServersPage extends StatefulWidget {
+  const TopRegionServersPage({super.key});
+
+  @override
+  State<TopRegionServersPage> createState() => _TopRegionServersPageState();
+}
+
+class _TopRegionServersPageState extends State<TopRegionServersPage> {
+  bool _loading = true;
+  String? _error;
+  List<GameServer> _servers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final servers = await ApiService.fetchTopServers();
+      final region = regionForLanguage(AppState.I.language);
+      final regional = region == null ? servers : servers.where((s) => s.countryGroup == region).toList();
+      final pool = regional.isEmpty ? servers : regional;
+      pool.sort((a, b) => b.upvotePower.compareTo(a.upvotePower));
+      if (!mounted) return;
+      setState(() {
+        _servers = pool.take(10).toList();
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+              child: Row(
+                children: [
+                  SoundInkWell(
+                    borderRadius: BorderRadius.circular(kRadius),
+                    onTap: () => Navigator.of(context).pop(),
+                    child: GlassPanel(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(Icons.arrow_back, size: 18, color: kFg),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      tr('topRegionTitle'),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(child: _buildBody()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading) {
+      return Center(child: CircularProgressIndicator(color: kAccent, strokeWidth: 2.4));
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.wifi_off, color: kFgAlpha(0.35), size: 32),
+              const SizedBox(height: 10),
+              Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: kFgAlpha(0.6), fontSize: 13)),
+              const SizedBox(height: 14),
+              SoundInkWell(
+                onTap: _load,
+                child: GlassPanel(
+                  opacity: 0.10,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  child: Text(tr('retry'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: kAccent,
+      backgroundColor: kSurface,
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(14, 2, 14, 20),
+        itemCount: _servers.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) => ServerTile(server: _servers[index]),
+      ),
     );
   }
 }
@@ -3401,6 +3589,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
   String? _error;
   List<GameServer> _favoriteServers = [];
   final Set<String> _selectedCodes = {};
+  // Holds the in-progress dragged slider value per server code, so the UI
+  // updates instantly without writing to prefs on every drag frame; only
+  // committed to AppState (and thus persisted) on drag end.
+  final Map<String, int> _draftThreshold = {};
+
+  int _thresholdFor(String code) => _draftThreshold[code] ?? AppState.I.favoriteNotifyThreshold(code);
 
   @override
   void initState() {
@@ -3423,6 +3617,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
       _favoriteServers.removeWhere((s) => codes.contains(s.code));
       _selectedCodes.clear();
     });
+    WidgetService.pushFavorites(_favoriteServers);
   }
 
   Future<void> _load() async {
@@ -3440,6 +3635,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
         _favoriteServers = matched;
         _loading = false;
       });
+      WidgetService.pushFavorites(_favoriteServers);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -3551,14 +3747,90 @@ class _FavoritesPageState extends State<FavoritesPage> {
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
           final s = _favoriteServers[index];
-          return ServerTile(
-            server: s,
-            selectionMode: _selectedCodes.isNotEmpty,
-            selected: _selectedCodes.contains(s.code),
-            onLongPress: () => _toggleSelect(s.code),
-            onSelectTap: () => _toggleSelect(s.code),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ServerTile(
+                server: s,
+                selectionMode: _selectedCodes.isNotEmpty,
+                selected: _selectedCodes.contains(s.code),
+                onLongPress: () => _toggleSelect(s.code),
+                onSelectTap: () => _toggleSelect(s.code),
+              ),
+              if (_selectedCodes.isEmpty) _buildNotifyControl(s.code),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildNotifyControl(String code) {
+    final enabled = AppState.I.isFavoriteNotifyEnabled(code);
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: GlassPanel(
+        opacity: 0.06,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.notifications_outlined, size: 15, color: kFgAlpha(0.6)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(tr('favoriteNotifyEnable'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75))),
+                ),
+                Switch(
+                  value: enabled,
+                  activeColor: kAccent,
+                  onChanged: (v) async {
+                    SoundService.tap();
+                    await AppState.I.setFavoriteNotifyEnabled(code, v);
+                    setState(() => _draftThreshold.remove(code));
+                  },
+                ),
+              ],
+            ),
+            if (enabled) ...[
+              const SizedBox(height: 2),
+              Text(tr('favoriteNotifyThresholdLabel'), style: TextStyle(fontSize: 11.5, color: kFgAlpha(0.5))),
+              Row(
+                children: [
+                  Expanded(
+                    child: SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        activeTrackColor: kAccent,
+                        inactiveTrackColor: kFgAlpha(0.15),
+                        thumbColor: kAccent,
+                        overlayColor: kAccent.withValues(alpha: 0.15),
+                      ),
+                      child: Slider(
+                        value: _thresholdFor(code).toDouble().clamp(1, 2000),
+                        min: 1,
+                        max: 2000,
+                        onChanged: (v) => setState(() => _draftThreshold[code] = v.round()),
+                        onChangeEnd: (v) async {
+                          await AppState.I.setFavoriteNotifyThreshold(code, v.round());
+                          setState(() => _draftThreshold.remove(code));
+                        },
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 44,
+                    child: Text(
+                      '${_thresholdFor(code)}',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -3660,25 +3932,28 @@ class _SettingsPageState extends State<SettingsPage> {
                   GlassPanel(
                     child: Row(
                       children: [
-                        (tr('textSizeSmall'), 0.9),
-                        (tr('textSizeNormal'), 1.0),
-                        (tr('textSizeLarge'), 1.15),
-                      ].map((opt) {
-                        final (label, value) = opt;
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 3),
-                            child: Pill(
-                              text: label,
-                              active: AppState.I.textScale == value,
-                              onTap: () {
-                                AppState.I.setTextScale(value);
+                        Text('a', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kFgAlpha(0.5))),
+                        Expanded(
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              activeTrackColor: kAccent,
+                              inactiveTrackColor: kFgAlpha(0.15),
+                              thumbColor: kAccent,
+                              overlayColor: kAccent.withValues(alpha: 0.15),
+                            ),
+                            child: Slider(
+                              value: AppState.I.textScale,
+                              min: 0.8,
+                              max: 1.4,
+                              onChanged: (v) {
+                                AppState.I.setTextScale(v);
                                 setState(() {});
                               },
                             ),
                           ),
-                        );
-                      }).toList(),
+                        ),
+                        Text('A', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: kFgAlpha(0.8))),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -3702,7 +3977,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _sectionLabel(tr('notifications')),
+                  _sectionLabel(tr('notificationSound')),
                   const SizedBox(height: 8),
                   GlassPanel(
                     child: Column(
@@ -3710,99 +3985,53 @@ class _SettingsPageState extends State<SettingsPage> {
                       children: [
                         Row(
                           children: [
-                            Expanded(
-                              child: Text(tr('notificationsDesc'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75))),
-                            ),
-                            Switch(
-                              value: AppState.I.notificationsEnabled,
-                              activeColor: kAccent,
-                              onChanged: (v) {
-                                SoundService.tap();
-                                AppState.I.setNotificationsEnabled(v);
-                                setState(() {});
-                              },
-                            ),
-                          ],
-                        ),
-                        if (AppState.I.notificationsEnabled) ...[
-                          Divider(height: 20, color: kFgAlpha(0.06)),
-                          Text(tr('notificationThreshold'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.5))),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              _stepperButton(Icons.remove, () {
-                                final v = (AppState.I.notificationThreshold - 5).clamp(1, 9999);
-                                AppState.I.setNotificationThreshold(v);
-                                setState(() {});
-                              }),
+                            for (final sound in const ['default', 'chime', 'bell']) ...[
                               Expanded(
-                                child: Center(
-                                  child: Text(
-                                    '${AppState.I.notificationThreshold}',
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                                  ),
-                                ),
-                              ),
-                              _stepperButton(Icons.add, () {
-                                final v = (AppState.I.notificationThreshold + 5).clamp(1, 9999);
-                                AppState.I.setNotificationThreshold(v);
-                                setState(() {});
-                              }),
-                            ],
-                          ),
-                          Divider(height: 20, color: kFgAlpha(0.06)),
-                          Text(tr('notificationSound'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.5))),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              for (final sound in const ['default', 'chime', 'bell']) ...[
-                                Expanded(
-                                  child: SoundInkWell(
-                                    borderRadius: BorderRadius.circular(kRadius),
-                                    onTap: () {
-                                      AppState.I.setNotificationSound(sound);
-                                      SoundService.previewNotificationSound(sound);
-                                      setState(() {});
-                                    },
-                                    child: GlassPanel(
-                                      opacity: AppState.I.notificationSound == sound ? 0.22 : 0.08,
-                                      borderOpacity: AppState.I.notificationSound == sound ? 0.6 : 0.2,
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
-                                      child: Center(
-                                        child: Text(
-                                          tr('sound${sound[0].toUpperCase()}${sound.substring(1)}'),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: AppState.I.notificationSound == sound ? FontWeight.w700 : FontWeight.w500,
-                                            color: AppState.I.notificationSound == sound ? kAccent : kFgAlpha(0.7),
-                                          ),
+                                child: SoundInkWell(
+                                  borderRadius: BorderRadius.circular(kRadius),
+                                  onTap: () {
+                                    AppState.I.setNotificationSound(sound);
+                                    SoundService.previewNotificationSound(sound);
+                                    setState(() {});
+                                  },
+                                  child: GlassPanel(
+                                    opacity: AppState.I.notificationSound == sound ? 0.22 : 0.08,
+                                    borderOpacity: AppState.I.notificationSound == sound ? 0.6 : 0.2,
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    child: Center(
+                                      child: Text(
+                                        tr('sound${sound[0].toUpperCase()}${sound.substring(1)}'),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: AppState.I.notificationSound == sound ? FontWeight.w700 : FontWeight.w500,
+                                          color: AppState.I.notificationSound == sound ? kAccent : kFgAlpha(0.7),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
-                                if (sound != 'bell') const SizedBox(width: 8),
-                              ],
-                            ],
-                          ),
-                          Divider(height: 20, color: kFgAlpha(0.06)),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(tr('vibrationDesc'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75))),
                               ),
-                              Switch(
-                                value: AppState.I.notificationVibration,
-                                activeColor: kAccent,
-                                onChanged: (v) {
-                                  SoundService.tap();
-                                  AppState.I.setNotificationVibration(v);
-                                  setState(() {});
-                                },
-                              ),
+                              if (sound != 'bell') const SizedBox(width: 8),
                             ],
-                          ),
-                        ],
+                          ],
+                        ),
+                        Divider(height: 20, color: kFgAlpha(0.06)),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(tr('vibrationDesc'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75))),
+                            ),
+                            Switch(
+                              value: AppState.I.notificationVibration,
+                              activeColor: kAccent,
+                              onChanged: (v) {
+                                SoundService.tap();
+                                AppState.I.setNotificationVibration(v);
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -3885,6 +4114,21 @@ class _SettingsPageState extends State<SettingsPage> {
                   const SizedBox(height: 20),
                   SoundInkWell(
                     borderRadius: BorderRadius.circular(kRadius),
+                    onTap: _clearCache,
+                    child: GlassPanel(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(tr('clearCache'), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                          ),
+                          Icon(Icons.cleaning_services_outlined, color: kFgAlpha(0.5), size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SoundInkWell(
+                    borderRadius: BorderRadius.circular(kRadius),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const AboutPage()),
                     ),
@@ -3904,6 +4148,20 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _clearCache() {
+    SoundService.tap();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: kSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadius)),
+        content: Text(tr('cacheCleared'), style: const TextStyle(fontSize: 13)),
       ),
     );
   }

@@ -1,7 +1,7 @@
 name: fivem_browser
 description: Server browser for the cfx.re / FiveM server list.
 publish_to: "none"
-version: 1.3.0+4
+version: 1.4.0+5
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -16,6 +16,7 @@ dependencies:
   share_plus: ^10.1.3
   audioplayers: ^6.1.0
   quick_actions: ^1.0.0
+  home_widget: ^0.7.0
 
 dev_dependencies:
   flutter_test:
