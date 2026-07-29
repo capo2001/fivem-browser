@@ -117,6 +117,8 @@ const Map<String, Map<String, String>> _strings = {
   'notificationsDesc': {'de': 'Benachrichtigung senden, wenn ein favorisierter Server genug Spieler hat', 'en': 'Notify me when a favorite server has enough players', 'fr': "M'avertir quand un serveur favori a assez de joueurs", 'es': 'Avisarme cuando un servidor favorito tenga suficientes jugadores', 'pl': 'Powiadom mnie, gdy ulubiony serwer ma wystarczająco graczy'},
   'notificationThreshold': {'de': 'Ab wie vielen Spielern benachrichtigen', 'en': 'Notify from this many players', 'fr': 'Notifier à partir de ce nombre de joueurs', 'es': 'Notificar a partir de esta cantidad de jugadores', 'pl': 'Powiadamiaj od tylu graczy'},
   'back': {'de': 'Zurück', 'en': 'Back', 'fr': 'Retour', 'es': 'Atrás', 'pl': 'Wstecz'},
+  'unreachable': {'de': 'Live-Details nicht erreichbar', 'en': 'Live details unreachable', 'fr': 'Détails en direct indisponibles', 'es': 'Detalles en vivo no disponibles', 'pl': 'Brak dostępu do szczegółów na żywo'},
+  'topServersNearYou': {'de': 'Top 3 in deiner Region', 'en': 'Top 3 in your region', 'fr': 'Top 3 dans ta région', 'es': 'Top 3 en tu región', 'pl': 'Top 3 w Twoim regionie'},
   'themeLight': {'de': 'Hell', 'en': 'Light', 'fr': 'Clair', 'es': 'Claro', 'pl': 'Jasny'},
   'themeDark': {'de': 'Dunkel', 'en': 'Dark', 'fr': 'Sombre', 'es': 'Oscuro', 'pl': 'Ciemny'},
   'themeAuto': {'de': 'Automatisch', 'en': 'Automatic', 'fr': 'Automatique', 'es': 'Automático', 'pl': 'Automatyczny'},
@@ -140,6 +142,14 @@ const Map<String, String> kLanguageNames = {
   'fr': 'Français',
   'es': 'Español',
   'pl': 'Polski',
+};
+
+const Map<String, String> kLanguageFlags = {
+  'de': '🇩🇪',
+  'en': '🇬🇧',
+  'fr': '🇫🇷',
+  'es': '🇪🇸',
+  'pl': '🇵🇱',
 };
 
 String tr(String key) {
@@ -369,6 +379,19 @@ class _FivemBrowserAppState extends State<FivemBrowserApp> with WidgetsBindingOb
         final base = isDark
             ? ThemeData.dark(useMaterial3: true)
             : ThemeData.light(useMaterial3: true);
+        SystemChrome.setSystemUIOverlayStyle(
+          isDark
+              ? const SystemUiOverlayStyle(
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.light,
+                  statusBarBrightness: Brightness.dark,
+                )
+              : const SystemUiOverlayStyle(
+                  statusBarColor: Colors.transparent,
+                  statusBarIconBrightness: Brightness.dark,
+                  statusBarBrightness: Brightness.light,
+                ),
+        );
         return MaterialApp(
           title: 'Fserver',
           debugShowCheckedModeBanner: false,
@@ -399,9 +422,41 @@ class _FivemBrowserAppState extends State<FivemBrowserApp> with WidgetsBindingOb
             dividerColor: kFg.withValues(alpha: 0.08),
             useMaterial3: true,
           ),
-          home: AppState.I.onboardingDone ? const MainMenuPage() : const OnboardingPage(),
+          home: const SplashPage(),
         );
       },
+    );
+  }
+}
+
+class SplashPage extends StatefulWidget {
+  const SplashPage({super.key});
+
+  @override
+  State<SplashPage> createState() => _SplashPageState();
+}
+
+class _SplashPageState extends State<SplashPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => AppState.I.onboardingDone ? const MainMenuPage() : const OnboardingPage(),
+        ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBg,
+      body: Center(
+        child: Icon(Icons.dns, size: 64, color: kAccent),
+      ),
     );
   }
 }
@@ -1143,14 +1198,23 @@ class _ServerListPageState extends State<ServerListPage> {
   SortMode _sortMode = SortMode.defaultOrder;
   RangeValues _playerRange = const RangeValues(0, kPlayerRangeMax);
   Timer? _autoRefreshTimer;
+  Timer? _countdownTimer;
+  static const int _autoRefreshSeconds = 60;
+  int _secondsUntilRefresh = _autoRefreshSeconds;
 
   @override
   void initState() {
     super.initState();
     _load();
     _searchCtrl.addListener(() => setState(() {}));
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: _autoRefreshSeconds), (_) {
       if (!_loading) _load();
+    });
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        _secondsUntilRefresh = _secondsUntilRefresh > 0 ? _secondsUntilRefresh - 1 : _autoRefreshSeconds;
+      });
     });
   }
 
@@ -1158,6 +1222,7 @@ class _ServerListPageState extends State<ServerListPage> {
   void dispose() {
     _searchCtrl.dispose();
     _autoRefreshTimer?.cancel();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
@@ -1165,6 +1230,7 @@ class _ServerListPageState extends State<ServerListPage> {
     setState(() {
       _loading = true;
       _error = null;
+      _secondsUntilRefresh = _autoRefreshSeconds;
     });
     try {
       final servers = await ApiService.fetchTopServers();
@@ -1305,6 +1371,14 @@ class _ServerListPageState extends State<ServerListPage> {
                 ),
               ),
               const Spacer(),
+              if (!_loading)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Text(
+                    '${_secondsUntilRefresh}s',
+                    style: TextStyle(fontSize: 11, color: kFg.withValues(alpha: 0.3)),
+                  ),
+                ),
               _iconButton(
                 icon: _filtersOpen ? Icons.tune : Icons.tune_outlined,
                 active: _filtersOpen,
@@ -1564,23 +1638,45 @@ class _ServerListPageState extends State<ServerListPage> {
 
 class ServerTile extends StatelessWidget {
   final GameServer server;
+  final bool selectionMode;
+  final bool selected;
+  final VoidCallback? onLongPress;
+  final VoidCallback? onSelectTap;
 
-  const ServerTile({super.key, required this.server});
+  const ServerTile({
+    super.key,
+    required this.server,
+    this.selectionMode = false,
+    this.selected = false,
+    this.onLongPress,
+    this.onSelectTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(kRadius),
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => ServerDetailPage(server: server)),
-        );
-      },
+      onTap: selectionMode
+          ? onSelectTap
+          : () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ServerDetailPage(server: server)),
+              );
+            },
+      onLongPress: onLongPress,
       child: GlassPanel(
         padding: const EdgeInsets.all(10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (selectionMode) ...[
+              Icon(
+                selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 22,
+                color: selected ? kAccent : kFg.withValues(alpha: 0.3),
+              ),
+              const SizedBox(width: 10),
+            ],
             _ServerIcon(server: server, size: 52),
             const SizedBox(width: 10),
             Expanded(
@@ -1726,6 +1822,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
   final TextEditingController _scriptCtrl = TextEditingController();
   List<String>? _fetchedResources;
   Map<String, String>? _fetchedExtraVars;
+  bool _unreachable = false;
 
   @override
   void initState() {
@@ -1744,7 +1841,9 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
         if (detail.vars.extra.isNotEmpty) _fetchedExtraVars = detail.vars.extra;
       });
     } catch (_) {
-      // Best-effort only - the page already shows the list-derived data.
+      // Best-effort only - the page already shows the list-derived data,
+      // but flag it so the user knows the live details couldn't refresh.
+      if (mounted) setState(() => _unreachable = true);
     }
   }
 
@@ -1833,6 +1932,19 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                         ),
                       ],
                     ),
+                    if (_unreachable) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.error_outline, size: 13, color: Colors.orangeAccent.withValues(alpha: 0.9)),
+                          const SizedBox(width: 5),
+                          Text(
+                            tr('unreachable'),
+                            style: TextStyle(fontSize: 11.5, color: Colors.orangeAccent.withValues(alpha: 0.9)),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -2253,7 +2365,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       children: [
         for (var i = 0; i < codes.length; i++) ...[
           if (i > 0) const SizedBox(height: 10),
-          _optionTile(kLanguageNames[codes[i]]!, AppState.I.language == codes[i], () => _selectLanguage(codes[i])),
+          _optionTile('${kLanguageFlags[codes[i]]} ${kLanguageNames[codes[i]]}', AppState.I.language == codes[i], () => _selectLanguage(codes[i])),
         ],
       ],
     );
@@ -2305,8 +2417,54 @@ class _OnboardingPageState extends State<OnboardingPage> {
 // Main menu
 // ---------------------------------------------------------------------------
 
-class MainMenuPage extends StatelessWidget {
+// Best-effort mapping from the app's UI language to a server region code
+// (matching GameServer.countryGroup) for the "top servers near you"
+// section. English has no single unambiguous country, so it falls back
+// to a global top 3 instead of guessing wrong.
+String? regionForLanguage(String lang) {
+  switch (lang) {
+    case 'de':
+      return 'DE';
+    case 'fr':
+      return 'FR';
+    case 'es':
+      return 'ES';
+    case 'pl':
+      return 'PL';
+    default:
+      return null;
+  }
+}
+
+class MainMenuPage extends StatefulWidget {
   const MainMenuPage({super.key});
+
+  @override
+  State<MainMenuPage> createState() => _MainMenuPageState();
+}
+
+class _MainMenuPageState extends State<MainMenuPage> {
+  List<GameServer>? _topServers;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTopServers();
+  }
+
+  Future<void> _loadTopServers() async {
+    try {
+      final servers = await ApiService.fetchTopServers();
+      final region = regionForLanguage(AppState.I.language);
+      final regional = region == null ? servers : servers.where((s) => s.countryGroup == region).toList();
+      final pool = regional.isEmpty ? servers : regional;
+      pool.sort((a, b) => b.upvotePower.compareTo(a.upvotePower));
+      if (!mounted) return;
+      setState(() => _topServers = pool.take(3).toList());
+    } catch (_) {
+      // Best-effort only - the section just stays hidden on failure.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2344,7 +2502,33 @@ class MainMenuPage extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const FavoritesPage()),
                     ),
                   ),
-                  const Spacer(),
+                  if (_topServers != null && _topServers!.isNotEmpty) ...[
+                    const SizedBox(height: 22),
+                    Text(
+                      tr('topServersNearYou').toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        letterSpacing: 0.6,
+                        fontWeight: FontWeight.w600,
+                        color: kFg.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            for (final s in _topServers!) ...[
+                              ServerTile(server: s),
+                              const SizedBox(height: 8),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else
+                    const Spacer(),
+                  const SizedBox(height: 12),
                   Align(
                     alignment: Alignment.bottomRight,
                     child: InkWell(
@@ -2448,11 +2632,29 @@ class _FavoritesPageState extends State<FavoritesPage> {
   bool _loading = true;
   String? _error;
   List<GameServer> _favoriteServers = [];
+  final Set<String> _selectedCodes = {};
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  void _toggleSelect(String code) {
+    setState(() {
+      if (!_selectedCodes.add(code)) _selectedCodes.remove(code);
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    final codes = _selectedCodes.toList();
+    for (final code in codes) {
+      await AppState.I.toggleFavorite(code);
+    }
+    setState(() {
+      _favoriteServers.removeWhere((s) => codes.contains(s.code));
+      _selectedCodes.clear();
+    });
   }
 
   Future<void> _load() async {
@@ -2492,17 +2694,30 @@ class _FavoritesPageState extends State<FavoritesPage> {
                 children: [
                   InkWell(
                     borderRadius: BorderRadius.circular(kRadius),
-                    onTap: () => Navigator.of(context).pop(),
+                    onTap: _selectedCodes.isNotEmpty
+                        ? () => setState(() => _selectedCodes.clear())
+                        : () => Navigator.of(context).pop(),
                     child: GlassPanel(
                       padding: const EdgeInsets.all(8),
-                      child: const Icon(Icons.arrow_back, size: 18),
+                      child: Icon(_selectedCodes.isNotEmpty ? Icons.close : Icons.arrow_back, size: 18, color: kFg),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    tr('favorites'),
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+                  Expanded(
+                    child: Text(
+                      _selectedCodes.isNotEmpty ? '${_selectedCodes.length}' : tr('favorites'),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+                    ),
                   ),
+                  if (_selectedCodes.isNotEmpty)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(kRadius),
+                      onTap: _deleteSelected,
+                      child: GlassPanel(
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -2566,7 +2781,16 @@ class _FavoritesPageState extends State<FavoritesPage> {
         padding: const EdgeInsets.fromLTRB(14, 2, 14, 20),
         itemCount: _favoriteServers.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, index) => ServerTile(server: _favoriteServers[index]),
+        itemBuilder: (context, index) {
+          final s = _favoriteServers[index];
+          return ServerTile(
+            server: s,
+            selectionMode: _selectedCodes.isNotEmpty,
+            selected: _selectedCodes.contains(s.code),
+            onLongPress: () => _toggleSelect(s.code),
+            onSelectTap: () => _toggleSelect(s.code),
+          );
+        },
       ),
     );
   }
@@ -2624,7 +2848,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       runSpacing: 8,
                       children: kLanguageNames.entries.map((entry) {
                         return Pill(
-                          text: entry.value,
+                          text: '${kLanguageFlags[entry.key]} ${entry.value}',
                           active: AppState.I.language == entry.key,
                           onTap: () {
                             AppState.I.setLanguage(entry.key);
