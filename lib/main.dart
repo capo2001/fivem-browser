@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 const Color _kDarkBg = Color(0xFF070A0F);
 const Color _kDarkSurface = Color(0xFF10141C);
@@ -118,6 +119,14 @@ const Map<String, Map<String, String>> _strings = {
   'notificationThreshold': {'de': 'Ab wie vielen Spielern benachrichtigen', 'en': 'Notify from this many players', 'fr': 'Notifier à partir de ce nombre de joueurs', 'es': 'Notificar a partir de esta cantidad de jugadores', 'pl': 'Powiadamiaj od tylu graczy'},
   'autoRefresh': {'de': 'Auto-Aktualisierung', 'en': 'Auto-refresh', 'fr': 'Actualisation automatique', 'es': 'Actualización automática', 'pl': 'Automatyczne odświeżanie'},
   'autoRefreshDesc': {'de': 'Wie oft sich die Serverliste im Hintergrund selbst aktualisiert', 'en': 'How often the server list refreshes itself automatically', 'fr': 'À quelle fréquence la liste des serveurs se rafraîchit automatiquement', 'es': 'Con qué frecuencia se actualiza automáticamente la lista de servidores', 'pl': 'Jak często lista serwerów odświeża się automatycznie'},
+  'uiSounds': {'de': 'Sound', 'en': 'Sound', 'fr': 'Son', 'es': 'Sonido', 'pl': 'Dźwięk'},
+  'uiSoundsDesc': {'de': 'Sound-Effekte bei Berührungen und beim App-Start abspielen', 'en': 'Play sound effects on taps and at app startup', 'fr': 'Jouer des effets sonores lors des interactions et au démarrage', 'es': 'Reproducir efectos de sonido al tocar y al iniciar la app', 'pl': 'Odtwarzaj dźwięki przy dotknięciach i przy starcie aplikacji'},
+  'favoriteOfflineTitle': {'de': 'Server offline', 'en': 'Server offline', 'fr': 'Serveur hors ligne', 'es': 'Servidor fuera de línea', 'pl': 'Serwer offline'},
+  'favoriteOfflineBody': {'de': '{name} ist nicht mehr erreichbar', 'en': '{name} is no longer reachable', 'fr': '{name} n\'est plus accessible', 'es': '{name} ya no está disponible', 'pl': '{name} jest niedostępny'},
+  'favoriteOnlineTitle': {'de': 'Server wieder online', 'en': 'Server back online', 'fr': 'Serveur de nouveau en ligne', 'es': 'Servidor de nuevo en línea', 'pl': 'Serwer znowu online'},
+  'favoriteOnlineBody': {'de': '{name} ist wieder erreichbar', 'en': '{name} is reachable again', 'fr': '{name} est de nouveau accessible', 'es': '{name} está disponible de nuevo', 'pl': '{name} jest znowu dostępny'},
+  'favoriteThresholdBody': {'de': 'hat gerade {clients} Spieler', 'en': 'has {clients} players right now', 'fr': 'a {clients} joueurs en ce moment', 'es': 'tiene {clients} jugadores ahora', 'pl': 'ma teraz {clients} graczy'},
+  'newBadge': {'de': 'NEU', 'en': 'NEW', 'fr': 'NOUVEAU', 'es': 'NUEVO', 'pl': 'NOWY'},
   'back': {'de': 'Zurück', 'en': 'Back', 'fr': 'Retour', 'es': 'Atrás', 'pl': 'Wstecz'},
   'unreachable': {'de': 'Live-Details nicht erreichbar', 'en': 'Live details unreachable', 'fr': 'Détails en direct indisponibles', 'es': 'Detalles en vivo no disponibles', 'pl': 'Brak dostępu do szczegółów na żywo'},
   'topServersNearYou': {'de': 'Top 3 in deiner Region', 'en': 'Top 3 in your region', 'fr': 'Top 3 dans ta région', 'es': 'Top 3 en tu región', 'pl': 'Top 3 w Twoim regionie'},
@@ -173,6 +182,7 @@ class AppState extends ChangeNotifier {
   bool notificationVibration = true;
   int notificationThreshold = 10;
   int refreshIntervalMinutes = 5;
+  bool uiSoundsEnabled = true;
   Set<String> favorites = {};
   bool onboardingDone = false;
 
@@ -198,6 +208,7 @@ class AppState extends ChangeNotifier {
     notificationVibration = prefs.getBool('notificationVibration') ?? true;
     notificationThreshold = prefs.getInt('notificationThreshold') ?? 10;
     refreshIntervalMinutes = prefs.getInt('refreshIntervalMinutes') ?? 5;
+    uiSoundsEnabled = prefs.getBool('uiSoundsEnabled') ?? true;
     favorites = (prefs.getStringList('favorites') ?? const []).toSet();
     onboardingDone = prefs.getBool('onboardingDone') ?? false;
   }
@@ -210,6 +221,7 @@ class AppState extends ChangeNotifier {
     await prefs.setBool('notificationVibration', notificationVibration);
     await prefs.setInt('notificationThreshold', notificationThreshold);
     await prefs.setInt('refreshIntervalMinutes', refreshIntervalMinutes);
+    await prefs.setBool('uiSoundsEnabled', uiSoundsEnabled);
     await prefs.setStringList('favorites', favorites.toList());
     await prefs.setBool('onboardingDone', onboardingDone);
   }
@@ -244,6 +256,12 @@ class AppState extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> setUiSoundsEnabled(bool value) async {
+    uiSoundsEnabled = value;
+    notifyListeners();
+    await _persist();
+  }
+
   Future<void> setNotificationVibration(bool value) async {
     notificationVibration = value;
     notifyListeners();
@@ -266,10 +284,78 @@ class AppState extends ChangeNotifier {
 }
 
 // ---------------------------------------------------------------------------
+// UI sound effects (synthesized, bundled as assets/sounds/*.wav)
+// ---------------------------------------------------------------------------
+
+class SoundService {
+  static final AudioPlayer _tapPlayer = AudioPlayer();
+  static final AudioPlayer _splashPlayer = AudioPlayer();
+
+  static Future<void> playSplash() async {
+    if (!AppState.I.uiSoundsEnabled) return;
+    try {
+      await _splashPlayer.play(AssetSource('sounds/splash.wav'), volume: 0.8);
+    } catch (_) {
+      // Best-effort only - a missing/failed sound should never break the UI.
+    }
+  }
+
+  static Future<void> tap() async {
+    if (!AppState.I.uiSoundsEnabled) return;
+    try {
+      await _tapPlayer.play(AssetSource('sounds/tap.wav'), volume: 0.55);
+    } catch (_) {
+      // Best-effort only.
+    }
+  }
+}
+
+// Drop-in replacement for InkWell that also plays a short UI tap sound
+// (best-effort, silently does nothing if sounds are off or fail to load).
+// Every InkWell in this file was mechanically switched to this widget so
+// taps make a sound app-wide; it forwards the same handful of named
+// parameters actually used across the codebase (onTap, onLongPress,
+// borderRadius, child).
+class SoundInkWell extends StatelessWidget {
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final BorderRadius? borderRadius;
+  final Widget child;
+
+  const SoundInkWell({
+    super.key,
+    this.onTap,
+    this.onLongPress,
+    this.borderRadius,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap == null
+          ? null
+          : () {
+              SoundService.tap();
+              onTap!();
+            },
+      onLongPress: onLongPress == null
+          ? null
+          : () {
+              SoundService.tap();
+              onLongPress!();
+            },
+      borderRadius: borderRadius,
+      child: child,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Background favorite-player-count check + local notifications
 // ---------------------------------------------------------------------------
 
-Future<void> _showFavoriteNotification(FlutterLocalNotificationsPlugin plugin, int id, String hostname, int clients, {bool vibration = true}) async {
+Future<void> _showNotification(FlutterLocalNotificationsPlugin plugin, int id, String title, String body, {bool vibration = true}) async {
   final details = NotificationDetails(
     android: AndroidNotificationDetails(
       'favorite_server_channel',
@@ -280,7 +366,7 @@ Future<void> _showFavoriteNotification(FlutterLocalNotificationsPlugin plugin, i
       enableVibration: vibration,
     ),
   );
-  await plugin.show(id, hostname, 'hat gerade $clients Spieler', details);
+  await plugin.show(id, title, body, details);
 }
 
 @pragma('vm:entry-point')
@@ -293,6 +379,8 @@ void callbackDispatcher() {
       if (!enabled || favorites.isEmpty) return true;
       final threshold = prefs.getInt('notificationThreshold') ?? 10;
       final vibration = prefs.getBool('notificationVibration') ?? true;
+      final lang = prefs.getString('language') ?? 'de';
+      String t(String key) => _strings[key]?[lang] ?? _strings[key]?['en'] ?? _strings[key]?['de'] ?? key;
 
       final plugin = FlutterLocalNotificationsPlugin();
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -301,13 +389,64 @@ void callbackDispatcher() {
       final servers = await ApiService.fetchTopServers();
       final byCode = {for (final s in servers) s.code: s};
       var notificationId = 5000;
+
+      // Track each favorite's online/offline status across background runs
+      // (first observation of a given favorite only establishes a
+      // baseline - it never fires a notification by itself).
+      final trackedCodes = (prefs.getStringList('favoritesTracked') ?? const []).toSet();
+      final onlineCodes = (prefs.getStringList('favoritesOnlineSnapshot') ?? const []).toSet();
+      final knownNames = <String, String>{
+        for (final entry in prefs.getStringList('favoritesHostnames') ?? const [])
+          if (entry.contains('::')) entry.split('::').first: entry.split('::').skip(1).join('::'),
+      };
+
+      final newTracked = <String>{};
+      final newOnline = <String>{};
+      final newNames = <String, String>{};
+
       for (final code in favorites) {
         final server = byCode[code];
-        if (server == null) continue;
-        if (server.clients >= threshold) {
-          await _showFavoriteNotification(plugin, notificationId++, server.hostname, server.clients, vibration: vibration);
+        final isOnline = server != null;
+        newTracked.add(code);
+        final displayName = server?.hostname ?? knownNames[code] ?? code;
+        newNames[code] = displayName;
+        if (isOnline) newOnline.add(code);
+
+        if (trackedCodes.contains(code)) {
+          final wasOnline = onlineCodes.contains(code);
+          if (wasOnline && !isOnline) {
+            await _showNotification(
+              plugin,
+              notificationId++,
+              t('favoriteOfflineTitle'),
+              t('favoriteOfflineBody').replaceAll('{name}', displayName),
+              vibration: vibration,
+            );
+          } else if (!wasOnline && isOnline) {
+            await _showNotification(
+              plugin,
+              notificationId++,
+              t('favoriteOnlineTitle'),
+              t('favoriteOnlineBody').replaceAll('{name}', displayName),
+              vibration: vibration,
+            );
+          }
+        }
+
+        if (isOnline && server.clients >= threshold) {
+          await _showNotification(
+            plugin,
+            notificationId++,
+            displayName,
+            t('favoriteThresholdBody').replaceAll('{clients}', '${server.clients}'),
+            vibration: vibration,
+          );
         }
       }
+
+      await prefs.setStringList('favoritesTracked', newTracked.toList());
+      await prefs.setStringList('favoritesOnlineSnapshot', newOnline.toList());
+      await prefs.setStringList('favoritesHostnames', [for (final e in newNames.entries) '${e.key}::${e.value}']);
     } catch (_) {
       // Best-effort background task - failures shouldn't crash anything.
     }
@@ -451,6 +590,7 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
+    SoundService.playSplash();
     Future.delayed(const Duration(milliseconds: 800), () {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -1148,7 +1288,7 @@ class Pill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = tintColor ?? kAccent;
-    return InkWell(
+    return SoundInkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(kRadius),
       child: Container(
@@ -1210,6 +1350,12 @@ class _ServerListPageState extends State<ServerListPage> {
   RangeValues _playerRange = const RangeValues(0, kPlayerRangeMax);
   Timer? _countdownTimer;
   int _secondsUntilRefresh = 0;
+  // In-memory only (not persisted - the full feed has 30k+ codes, far too
+  // many to store in SharedPreferences). Servers that weren't present in
+  // the previous in-session load get a "NEU" badge; the very first load
+  // has nothing to compare against, so nothing is flagged new yet.
+  Set<String>? _previousCodes;
+  Set<String> _newCodes = {};
 
   int get _autoRefreshSeconds => AppState.I.refreshIntervalMinutes * 60;
 
@@ -1252,9 +1398,13 @@ class _ServerListPageState extends State<ServerListPage> {
     try {
       final servers = await ApiService.fetchTopServers();
       servers.sort((a, b) => b.upvotePower.compareTo(a.upvotePower));
+      final codes = servers.map((s) => s.code).toSet();
+      final newCodes = _previousCodes == null ? <String>{} : codes.difference(_previousCodes!);
       setState(() {
         _servers = servers;
         _topTags = _computeTopTags(servers);
+        _newCodes = newCodes;
+        _previousCodes = codes;
         _loading = false;
       });
     } catch (e) {
@@ -1434,7 +1584,7 @@ class _ServerListPageState extends State<ServerListPage> {
                   ),
                 ),
                 if (_searchCtrl.text.isNotEmpty)
-                  InkWell(
+                  SoundInkWell(
                     onTap: () => _searchCtrl.clear(),
                     child: Icon(Icons.close, size: 16, color: kFg.withValues(alpha: 0.5)),
                   ),
@@ -1450,7 +1600,7 @@ class _ServerListPageState extends State<ServerListPage> {
     return GlassPanel(
       padding: const EdgeInsets.all(8),
       opacity: active ? 0.14 : 0.05,
-      child: InkWell(
+      child: SoundInkWell(
         onTap: onTap,
         child: Icon(icon, size: 18, color: active ? kAccent : kFg.withValues(alpha: 0.8)),
       ),
@@ -1628,7 +1778,7 @@ class _ServerListPageState extends State<ServerListPage> {
               GlassPanel(
                 opacity: 0.10,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                child: InkWell(
+                child: SoundInkWell(
                   onTap: _load,
                   child: Text(tr('retry'), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
@@ -1654,7 +1804,10 @@ class _ServerListPageState extends State<ServerListPage> {
         padding: const EdgeInsets.fromLTRB(14, 2, 14, 20),
         itemCount: filtered.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, index) => ServerTile(server: filtered[index]),
+        itemBuilder: (context, index) {
+          final s = filtered[index];
+          return ServerTile(server: s, isNew: _newCodes.contains(s.code));
+        },
       ),
     );
   }
@@ -1664,6 +1817,7 @@ class ServerTile extends StatelessWidget {
   final GameServer server;
   final bool selectionMode;
   final bool selected;
+  final bool isNew;
   final VoidCallback? onLongPress;
   final VoidCallback? onSelectTap;
 
@@ -1672,13 +1826,14 @@ class ServerTile extends StatelessWidget {
     required this.server,
     this.selectionMode = false,
     this.selected = false,
+    this.isNew = false,
     this.onLongPress,
     this.onSelectTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return SoundInkWell(
       borderRadius: BorderRadius.circular(kRadius),
       onTap: selectionMode
           ? onSelectTap
@@ -1707,11 +1862,31 @@ class ServerTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    server.hostname,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          server.hostname,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      if (isNew) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(kRadius),
+                            color: kAccent.withValues(alpha: 0.16),
+                          ),
+                          child: Text(
+                            tr('newBadge'),
+                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: kAccent, letterSpacing: 0.3),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   if (server.vars.tags.isNotEmpty)
@@ -1973,7 +2148,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                     Row(
                       children: [
                         Expanded(
-                          child: InkWell(
+                          child: SoundInkWell(
                             borderRadius: BorderRadius.circular(kRadius),
                             onTap: _copyJoin,
                             child: GlassPanel(
@@ -2004,7 +2179,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                           ),
                         ),
                         const SizedBox(width: 8),
-                        InkWell(
+                        SoundInkWell(
                           borderRadius: BorderRadius.circular(kRadius),
                           onTap: _shareJoin,
                           child: GlassPanel(
@@ -2360,7 +2535,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               const Spacer(),
               SizedBox(
                 width: double.infinity,
-                child: InkWell(
+                child: SoundInkWell(
                   borderRadius: BorderRadius.circular(kRadius),
                   onTap: _onContinue,
                   child: GlassPanel(
@@ -2413,7 +2588,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   }
 
   Widget _optionTile(String label, bool active, VoidCallback onTap, {IconData? icon}) {
-    return InkWell(
+    return SoundInkWell(
       borderRadius: BorderRadius.circular(kRadius),
       onTap: onTap,
       child: GlassPanel(
@@ -2555,7 +2730,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
                   const SizedBox(height: 12),
                   Align(
                     alignment: Alignment.bottomRight,
-                    child: InkWell(
+                    child: SoundInkWell(
                       borderRadius: BorderRadius.circular(kRadius),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const SettingsPage()),
@@ -2593,7 +2768,7 @@ class _MenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return SoundInkWell(
       borderRadius: BorderRadius.circular(kRadius),
       onTap: onTap,
       child: GlassPanel(
@@ -2716,7 +2891,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
               child: Row(
                 children: [
-                  InkWell(
+                  SoundInkWell(
                     borderRadius: BorderRadius.circular(kRadius),
                     onTap: _selectedCodes.isNotEmpty
                         ? () => setState(() => _selectedCodes.clear())
@@ -2734,7 +2909,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     ),
                   ),
                   if (_selectedCodes.isNotEmpty)
-                    InkWell(
+                    SoundInkWell(
                       borderRadius: BorderRadius.circular(kRadius),
                       onTap: _deleteSelected,
                       child: GlassPanel(
@@ -2779,7 +2954,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               const SizedBox(height: 10),
               Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: kFg.withValues(alpha: 0.6), fontSize: 13)),
               const SizedBox(height: 14),
-              InkWell(
+              SoundInkWell(
                 onTap: _load,
                 child: GlassPanel(
                   opacity: 0.10,
@@ -2844,7 +3019,7 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
               child: Row(
                 children: [
-                  InkWell(
+                  SoundInkWell(
                     borderRadius: BorderRadius.circular(kRadius),
                     onTap: () => Navigator.of(context).pop(),
                     child: GlassPanel(
@@ -2892,7 +3067,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         final active = AppState.I.themeMode == mode;
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: InkWell(
+                          child: SoundInkWell(
                             onTap: () {
                               AppState.I.setThemeMode(mode);
                               setState(() {});
@@ -2926,6 +3101,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               value: AppState.I.notificationsEnabled,
                               activeColor: kAccent,
                               onChanged: (v) {
+                                SoundService.tap();
                                 AppState.I.setNotificationsEnabled(v);
                                 setState(() {});
                               },
@@ -2968,6 +3144,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 value: AppState.I.notificationVibration,
                                 activeColor: kAccent,
                                 onChanged: (v) {
+                                  SoundService.tap();
                                   AppState.I.setNotificationVibration(v);
                                   setState(() {});
                                 },
@@ -3013,7 +3190,28 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  InkWell(
+                  _sectionLabel(tr('uiSounds')),
+                  const SizedBox(height: 8),
+                  GlassPanel(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(tr('uiSoundsDesc'), style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75))),
+                        ),
+                        Switch(
+                          value: AppState.I.uiSoundsEnabled,
+                          activeColor: kAccent,
+                          onChanged: (v) {
+                            AppState.I.setUiSoundsEnabled(v);
+                            if (v) SoundService.tap(); // audible confirmation when turning sounds on
+                            setState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SoundInkWell(
                     borderRadius: BorderRadius.circular(kRadius),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const AboutPage()),
@@ -3039,7 +3237,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _stepperButton(IconData icon, VoidCallback onTap) {
-    return InkWell(
+    return SoundInkWell(
       borderRadius: BorderRadius.circular(kRadius),
       onTap: onTap,
       child: GlassPanel(
@@ -3082,7 +3280,7 @@ class AboutPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
               child: Row(
                 children: [
-                  InkWell(
+                  SoundInkWell(
                     borderRadius: BorderRadius.circular(kRadius),
                     onTap: () => Navigator.of(context).pop(),
                     child: GlassPanel(
