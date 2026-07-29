@@ -21,57 +21,54 @@ const Color _kLightFg = Color(0xFF14171C);
 const double kRadius = 5;
 const String kAppVersion = '1.1.0';
 
-Color get kAccent => AppState.I.accentColor;
-Color get kBg => AppState.I.currentTheme.bg;
-Color get kSurface => AppState.I.currentTheme.surface;
+// Single fixed brand accent - no more per-theme accent colors, only
+// light/dark/auto vary the background/foreground now.
+const Color kAccent = Color(0xFFFF8A3D);
+
+Color get kBg => AppState.I.isDark ? _kDarkBg : _kLightBg;
+Color get kSurface => AppState.I.isDark ? _kDarkSurface : _kLightSurface;
 // Foreground (text/icon) color - flips from white to near-black in the
 // light theme. Not used for controls overlaid on server banner images
 // (those stay a fixed white, matching photo-overlay conventions).
-Color get kFg => AppState.I.currentTheme.isDark ? Colors.white : _kLightFg;
+Color get kFg => AppState.I.isDark ? Colors.white : _kLightFg;
 
 const String kFavoriteCheckTask = 'favoriteCheckTask';
 
 // ---------------------------------------------------------------------------
-// Themes
+// Theme mode (light / dark / auto - follows system)
 // ---------------------------------------------------------------------------
 
-class AppThemeOption {
-  final String key;
-  final String labelKey;
-  final Color accent;
-  final Color bg;
-  final Color surface;
-  final bool isDark;
-  const AppThemeOption(
-    this.key,
-    this.labelKey,
-    this.accent, {
-    this.bg = _kDarkBg,
-    this.surface = _kDarkSurface,
-    this.isDark = true,
-  });
+const List<String> kThemeModes = ['light', 'dark', 'auto'];
+
+IconData themeModeIcon(String mode) {
+  switch (mode) {
+    case 'light':
+      return Icons.wb_sunny_outlined;
+    case 'dark':
+      return Icons.nightlight_outlined;
+    default:
+      return Icons.brightness_auto_outlined;
+  }
 }
 
-const List<AppThemeOption> kThemeOptions = [
-  AppThemeOption('silver', 'themeSilver', Color(0xFFD4D8DF)),
-  AppThemeOption('blue', 'themeBlue', Color(0xFF4C8DFF)),
-  AppThemeOption('gold', 'themeGold', Color(0xFFE0B45A)),
-  AppThemeOption('red', 'themeRed', Color(0xFFE5484D)),
-  AppThemeOption('green', 'themeGreen', Color(0xFF4ADE80)),
-  AppThemeOption('purple', 'themePurple', Color(0xFFB794F6)),
-  AppThemeOption('orange', 'themeOrange', Color(0xFFFF8A3D)),
-  AppThemeOption(
-    'light',
-    'themeLight',
-    Color(0xFF3D6FDB),
-    bg: _kLightBg,
-    surface: _kLightSurface,
-    isDark: false,
-  ),
-];
+// Old installs may still have a color-theme key ('silver', 'blue', ...)
+// persisted from before the theme system was simplified to light/dark/
+// auto - every one of those was a dark theme except 'light' itself.
+String _migrateThemeMode(String stored) {
+  if (kThemeModes.contains(stored)) return stored;
+  return stored == 'light' ? 'light' : 'dark';
+}
 
-AppThemeOption themeByKey(String key) =>
-    kThemeOptions.firstWhere((t) => t.key == key, orElse: () => kThemeOptions.first);
+String themeModeLabelKey(String mode) {
+  switch (mode) {
+    case 'light':
+      return 'themeLight';
+    case 'dark':
+      return 'themeDark';
+    default:
+      return 'themeAuto';
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Localization (lightweight - no codegen, just a lookup table)
@@ -120,14 +117,9 @@ const Map<String, Map<String, String>> _strings = {
   'notificationsDesc': {'de': 'Benachrichtigung senden, wenn ein favorisierter Server genug Spieler hat', 'en': 'Notify me when a favorite server has enough players', 'fr': "M'avertir quand un serveur favori a assez de joueurs", 'es': 'Avisarme cuando un servidor favorito tenga suficientes jugadores', 'pl': 'Powiadom mnie, gdy ulubiony serwer ma wystarczająco graczy'},
   'notificationThreshold': {'de': 'Ab wie vielen Spielern benachrichtigen', 'en': 'Notify from this many players', 'fr': 'Notifier à partir de ce nombre de joueurs', 'es': 'Notificar a partir de esta cantidad de jugadores', 'pl': 'Powiadamiaj od tylu graczy'},
   'back': {'de': 'Zurück', 'en': 'Back', 'fr': 'Retour', 'es': 'Atrás', 'pl': 'Wstecz'},
-  'themeSilver': {'de': 'Silber', 'en': 'Silver', 'fr': 'Argent', 'es': 'Plata', 'pl': 'Srebrny'},
-  'themeBlue': {'de': 'Blau', 'en': 'Blue', 'fr': 'Bleu', 'es': 'Azul', 'pl': 'Niebieski'},
-  'themeGold': {'de': 'Gold', 'en': 'Gold', 'fr': 'Or', 'es': 'Oro', 'pl': 'Złoty'},
-  'themeRed': {'de': 'Rot', 'en': 'Red', 'fr': 'Rouge', 'es': 'Rojo', 'pl': 'Czerwony'},
-  'themeGreen': {'de': 'Grün', 'en': 'Green', 'fr': 'Vert', 'es': 'Verde', 'pl': 'Zielony'},
-  'themePurple': {'de': 'Lila', 'en': 'Purple', 'fr': 'Violet', 'es': 'Morado', 'pl': 'Fioletowy'},
-  'themeOrange': {'de': 'Orange', 'en': 'Orange', 'fr': 'Orange', 'es': 'Naranja', 'pl': 'Pomarańczowy'},
   'themeLight': {'de': 'Hell', 'en': 'Light', 'fr': 'Clair', 'es': 'Claro', 'pl': 'Jasny'},
+  'themeDark': {'de': 'Dunkel', 'en': 'Dark', 'fr': 'Sombre', 'es': 'Oscuro', 'pl': 'Ciemny'},
+  'themeAuto': {'de': 'Automatisch', 'en': 'Automatic', 'fr': 'Automatique', 'es': 'Automático', 'pl': 'Automatyczny'},
   'sortBy': {'de': 'Sortierung', 'en': 'Sort by', 'fr': 'Trier par', 'es': 'Ordenar por', 'pl': 'Sortowanie'},
   'sortDefault': {'de': 'Standard', 'en': 'Default', 'fr': 'Par défaut', 'es': 'Predeterminado', 'pl': 'Domyślne'},
   'sortMostPlayers': {'de': 'Meiste Spieler', 'en': 'Most players', 'fr': 'Plus de joueurs', 'es': 'Más jugadores', 'pl': 'Najwięcej graczy'},
@@ -164,15 +156,19 @@ class AppState extends ChangeNotifier {
   static final AppState I = AppState._();
 
   String language = 'de';
-  String themeKey = 'silver';
+  String themeMode = 'dark';
   bool notificationsEnabled = false;
   bool notificationVibration = true;
   int notificationThreshold = 10;
   Set<String> favorites = {};
   bool onboardingDone = false;
 
-  Color get accentColor => themeByKey(themeKey).accent;
-  AppThemeOption get currentTheme => themeByKey(themeKey);
+  bool get isDark {
+    if (themeMode == 'auto') {
+      return PlatformDispatcher.instance.platformBrightness == Brightness.dark;
+    }
+    return themeMode == 'dark';
+  }
 
   // Only used to pick a sensible default before the user has explicitly
   // chosen a language (i.e. on first launch, before onboarding).
@@ -184,7 +180,7 @@ class AppState extends ChangeNotifier {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     language = prefs.getString('language') ?? _detectDeviceLanguage();
-    themeKey = prefs.getString('themeKey') ?? 'silver';
+    themeMode = _migrateThemeMode(prefs.getString('themeMode') ?? prefs.getString('themeKey') ?? 'dark');
     notificationsEnabled = prefs.getBool('notificationsEnabled') ?? false;
     notificationVibration = prefs.getBool('notificationVibration') ?? true;
     notificationThreshold = prefs.getInt('notificationThreshold') ?? 10;
@@ -195,7 +191,7 @@ class AppState extends ChangeNotifier {
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language', language);
-    await prefs.setString('themeKey', themeKey);
+    await prefs.setString('themeMode', themeMode);
     await prefs.setBool('notificationsEnabled', notificationsEnabled);
     await prefs.setBool('notificationVibration', notificationVibration);
     await prefs.setInt('notificationThreshold', notificationThreshold);
@@ -209,8 +205,8 @@ class AppState extends ChangeNotifier {
     await _persist();
   }
 
-  Future<void> setThemeKey(String key) async {
-    themeKey = key;
+  Future<void> setThemeMode(String mode) async {
+    themeMode = mode;
     notifyListeners();
     await _persist();
   }
@@ -336,16 +332,41 @@ void main() {
   });
 }
 
-class FivemBrowserApp extends StatelessWidget {
+class FivemBrowserApp extends StatefulWidget {
   const FivemBrowserApp({super.key});
+
+  @override
+  State<FivemBrowserApp> createState() => _FivemBrowserAppState();
+}
+
+class _FivemBrowserAppState extends State<FivemBrowserApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    // Only matters in 'auto' mode, but a harmless rebuild otherwise -
+    // AppState itself doesn't change, so ListenableBuilder alone
+    // wouldn't pick up a system-level brightness flip.
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: AppState.I,
       builder: (context, _) {
-        final currentTheme = AppState.I.currentTheme;
-        final base = currentTheme.isDark
+        final isDark = AppState.I.isDark;
+        final base = isDark
             ? ThemeData.dark(useMaterial3: true)
             : ThemeData.light(useMaterial3: true);
         return MaterialApp(
@@ -354,7 +375,7 @@ class FivemBrowserApp extends StatelessWidget {
           theme: base.copyWith(
             scaffoldBackgroundColor: kBg,
             colorScheme: base.colorScheme.copyWith(
-              brightness: currentTheme.isDark ? Brightness.dark : Brightness.light,
+              brightness: isDark ? Brightness.dark : Brightness.light,
               primary: kAccent,
               secondary: kAccent,
               surface: kSurface,
@@ -2163,8 +2184,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
     setState(() {});
   }
 
-  void _selectTheme(String key) {
-    AppState.I.setThemeKey(key);
+  void _selectTheme(String mode) {
+    AppState.I.setThemeMode(mode);
     setState(() {});
   }
 
@@ -2240,22 +2261,22 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   Widget _buildThemeStep() {
     return Column(
-      children: kThemeOptions.map((t) {
-        final label = tr(t.labelKey);
+      children: kThemeModes.map((mode) {
+        final label = tr(themeModeLabelKey(mode));
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: _optionTile(
             label,
-            AppState.I.themeKey == t.key,
-            () => _selectTheme(t.key),
-            swatch: t.accent,
+            AppState.I.themeMode == mode,
+            () => _selectTheme(mode),
+            icon: themeModeIcon(mode),
           ),
         );
       }).toList(),
     );
   }
 
-  Widget _optionTile(String label, bool active, VoidCallback onTap, {Color? swatch}) {
+  Widget _optionTile(String label, bool active, VoidCallback onTap, {IconData? icon}) {
     return InkWell(
       borderRadius: BorderRadius.circular(kRadius),
       onTap: onTap,
@@ -2265,12 +2286,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         child: Row(
           children: [
-            if (swatch != null) ...[
-              Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(color: swatch, shape: BoxShape.circle),
-              ),
+            if (icon != null) ...[
+              Icon(icon, size: 20, color: kFg.withValues(alpha: 0.85)),
               const SizedBox(width: 12),
             ],
             Expanded(
@@ -2622,23 +2639,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   const SizedBox(height: 8),
                   GlassPanel(
                     child: Column(
-                      children: kThemeOptions.map((t) {
-                        final label = tr(t.labelKey);
-                        final active = AppState.I.themeKey == t.key;
+                      children: kThemeModes.map((mode) {
+                        final label = tr(themeModeLabelKey(mode));
+                        final active = AppState.I.themeMode == mode;
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           child: InkWell(
                             onTap: () {
-                              AppState.I.setThemeKey(t.key);
+                              AppState.I.setThemeMode(mode);
                               setState(() {});
                             },
                             child: Row(
                               children: [
-                                Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(color: t.accent, shape: BoxShape.circle),
-                                ),
+                                Icon(themeModeIcon(mode), size: 19, color: kFg.withValues(alpha: 0.85)),
                                 const SizedBox(width: 12),
                                 Expanded(child: Text(label, style: const TextStyle(fontSize: 13.5))),
                                 if (active) Icon(Icons.check_circle, size: 17, color: kAccent),
