@@ -1747,7 +1747,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
   }
 
   void _shareJoin() {
-    SharePlus.instance.share(ShareParams(text: '${_server.hostname}\n${_server.joinUrl}'));
+    Share.share('${_server.hostname}\n${_server.joinUrl}');
   }
 
   @override
