@@ -13,6 +13,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:quick_actions/quick_actions.dart';
 
 const Color _kDarkBg = Color(0xFF070A0F);
 const Color _kDarkSurface = Color(0xFF10141C);
@@ -32,6 +33,15 @@ Color get kSurface => AppState.I.isDark ? _kDarkSurface : _kLightSurface;
 // light theme. Not used for controls overlaid on server banner images
 // (those stay a fixed white, matching photo-overlay conventions).
 Color get kFg => AppState.I.isDark ? Colors.white : _kLightFg;
+
+// Foreground color at a given alpha, boosted toward fully opaque when
+// high-contrast mode is on (keeping some relative fade hierarchy intact
+// rather than making everything solid white/black).
+Color kFgAlpha(double alpha) {
+  if (!AppState.I.highContrast) return kFg.withValues(alpha: alpha);
+  final boosted = (alpha + (1 - alpha) * 0.7).clamp(0.0, 1.0);
+  return kFg.withValues(alpha: boosted);
+}
 
 const String kFavoriteCheckTask = 'favoriteCheckTask';
 
@@ -117,10 +127,33 @@ const Map<String, Map<String, String>> _strings = {
   'notifications': {'de': 'Benachrichtigungen', 'en': 'Notifications', 'fr': 'Notifications', 'es': 'Notificaciones', 'pl': 'Powiadomienia'},
   'notificationsDesc': {'de': 'Benachrichtigung senden, wenn ein favorisierter Server genug Spieler hat', 'en': 'Notify me when a favorite server has enough players', 'fr': "M'avertir quand un serveur favori a assez de joueurs", 'es': 'Avisarme cuando un servidor favorito tenga suficientes jugadores', 'pl': 'Powiadom mnie, gdy ulubiony serwer ma wystarczająco graczy'},
   'notificationThreshold': {'de': 'Ab wie vielen Spielern benachrichtigen', 'en': 'Notify from this many players', 'fr': 'Notifier à partir de ce nombre de joueurs', 'es': 'Notificar a partir de esta cantidad de jugadores', 'pl': 'Powiadamiaj od tylu graczy'},
+  'favoriteThreshold': {'de': 'Schwelle für diesen Server', 'en': 'Threshold for this server', 'fr': 'Seuil pour ce serveur', 'es': 'Umbral para este servidor', 'pl': 'Próg dla tego serwera'},
+  'useDefaultThreshold': {'de': 'Standard verwenden', 'en': 'Use default', 'fr': 'Utiliser la valeur par défaut', 'es': 'Usar valor predeterminado', 'pl': 'Użyj domyślnej'},
+  'notificationSound': {'de': 'Benachrichtigungston', 'en': 'Notification sound', 'fr': 'Son de notification', 'es': 'Sonido de notificación', 'pl': 'Dźwięk powiadomienia'},
+  'soundDefault': {'de': 'Standard', 'en': 'Default', 'fr': 'Par défaut', 'es': 'Predeterminado', 'pl': 'Domyślny'},
+  'soundChime': {'de': 'Glockenspiel', 'en': 'Chime', 'fr': 'Carillon', 'es': 'Campanilla', 'pl': 'Dzwonek'},
+  'soundBell': {'de': 'Glocke', 'en': 'Bell', 'fr': 'Cloche', 'es': 'Campana', 'pl': 'Dzwon'},
+  'tutorialServerListTitle': {'de': 'Serverliste', 'en': 'Server list', 'fr': 'Liste des serveurs', 'es': 'Lista de servidores', 'pl': 'Lista serwerów'},
+  'tutorialServerListDesc': {'de': 'Hier findest du alle FiveM-Server, kannst filtern, sortieren und suchen.', 'en': 'Browse every FiveM server here, with filtering, sorting and search.', 'fr': 'Parcourez ici tous les serveurs FiveM, avec filtres, tri et recherche.', 'es': 'Explora aquí todos los servidores FiveM, con filtros, orden y búsqueda.', 'pl': 'Tutaj znajdziesz wszystkie serwery FiveM z filtrowaniem, sortowaniem i wyszukiwaniem.'},
+  'tutorialFavoritesTitle': {'de': 'Favoriten', 'en': 'Favorites', 'fr': 'Favoris', 'es': 'Favoritos', 'pl': 'Ulubione'},
+  'tutorialFavoritesDesc': {'de': 'Markiere Server als Favorit, um Benachrichtigungen zu erhalten, wenn sie online gehen oder genug Spieler haben.', 'en': 'Star a server as favorite to get notified when it comes online or reaches enough players.', 'fr': 'Marquez un serveur comme favori pour être averti quand il est en ligne ou atteint assez de joueurs.', 'es': 'Marca un servidor como favorito para recibir avisos cuando esté en línea o tenga suficientes jugadores.', 'pl': 'Oznacz serwer jako ulubiony, aby otrzymać powiadomienie, gdy będzie online lub ma wystarczająco graczy.'},
+  'tutorialSettingsTitle': {'de': 'Einstellungen', 'en': 'Settings', 'fr': 'Paramètres', 'es': 'Ajustes', 'pl': 'Ustawienia'},
+  'tutorialSettingsDesc': {'de': 'Sprache, Design, Textgröße, Sounds und Benachrichtigungen kannst du hier anpassen.', 'en': 'Adjust language, theme, text size, sounds and notifications here.', 'fr': "Ajustez ici la langue, le thème, la taille du texte, les sons et les notifications.", 'es': 'Ajusta aquí el idioma, el tema, el tamaño del texto, los sonidos y las notificaciones.', 'pl': 'Dostosuj tutaj język, motyw, rozmiar tekstu, dźwięki i powiadomienia.'},
+  'tutorialNext': {'de': 'Weiter', 'en': 'Next', 'fr': 'Suivant', 'es': 'Siguiente', 'pl': 'Dalej'},
+  'tutorialDone': {'de': 'Fertig', 'en': 'Done', 'fr': 'Terminé', 'es': 'Listo', 'pl': 'Gotowe'},
+  'tutorialSkip': {'de': 'Überspringen', 'en': 'Skip', 'fr': 'Passer', 'es': 'Omitir', 'pl': 'Pomiń'},
   'autoRefresh': {'de': 'Auto-Aktualisierung', 'en': 'Auto-refresh', 'fr': 'Actualisation automatique', 'es': 'Actualización automática', 'pl': 'Automatyczne odświeżanie'},
   'autoRefreshDesc': {'de': 'Wie oft sich die Serverliste im Hintergrund selbst aktualisiert', 'en': 'How often the server list refreshes itself automatically', 'fr': 'À quelle fréquence la liste des serveurs se rafraîchit automatiquement', 'es': 'Con qué frecuencia se actualiza automáticamente la lista de servidores', 'pl': 'Jak często lista serwerów odświeża się automatycznie'},
   'uiSounds': {'de': 'Sound', 'en': 'Sound', 'fr': 'Son', 'es': 'Sonido', 'pl': 'Dźwięk'},
   'uiSoundsDesc': {'de': 'Sound-Effekte bei Berührungen und beim App-Start abspielen', 'en': 'Play sound effects on taps and at app startup', 'fr': 'Jouer des effets sonores lors des interactions et au démarrage', 'es': 'Reproducir efectos de sonido al tocar y al iniciar la app', 'pl': 'Odtwarzaj dźwięki przy dotknięciach i przy starcie aplikacji'},
+  'haptics': {'de': 'Vibration bei Berührung', 'en': 'Haptic feedback', 'fr': 'Retour haptique', 'es': 'Retroalimentación háptica', 'pl': 'Wibracje dotykowe'},
+  'hapticsDesc': {'de': 'Kurz vibrieren bei Berührungen in der App', 'en': 'Brief vibration on taps within the app', 'fr': 'Légère vibration lors des interactions dans l\'app', 'es': 'Vibración breve al tocar dentro de la app', 'pl': 'Krótka wibracja przy dotknięciach w aplikacji'},
+  'textSize': {'de': 'Schriftgröße', 'en': 'Text size', 'fr': 'Taille du texte', 'es': 'Tamaño del texto', 'pl': 'Rozmiar tekstu'},
+  'textSizeSmall': {'de': 'Klein', 'en': 'Small', 'fr': 'Petit', 'es': 'Pequeño', 'pl': 'Mały'},
+  'textSizeNormal': {'de': 'Normal', 'en': 'Normal', 'fr': 'Normal', 'es': 'Normal', 'pl': 'Normalny'},
+  'textSizeLarge': {'de': 'Groß', 'en': 'Large', 'fr': 'Grand', 'es': 'Grande', 'pl': 'Duży'},
+  'highContrast': {'de': 'Hoher Kontrast', 'en': 'High contrast', 'fr': 'Contraste élevé', 'es': 'Alto contraste', 'pl': 'Wysoki kontrast'},
+  'highContrastDesc': {'de': 'Kräftigere Farben und besserer Textkontrast für schwächeres Sehen', 'en': 'Bolder colors and stronger text contrast for low vision', 'fr': 'Couleurs plus marquées et meilleur contraste de texte', 'es': 'Colores más fuertes y mejor contraste de texto', 'pl': 'Mocniejsze kolory i lepszy kontrast tekstu'},
   'favoriteOfflineTitle': {'de': 'Server offline', 'en': 'Server offline', 'fr': 'Serveur hors ligne', 'es': 'Servidor fuera de línea', 'pl': 'Serwer offline'},
   'favoriteOfflineBody': {'de': '{name} ist nicht mehr erreichbar', 'en': '{name} is no longer reachable', 'fr': '{name} n\'est plus accessible', 'es': '{name} ya no está disponible', 'pl': '{name} jest niedostępny'},
   'favoriteOnlineTitle': {'de': 'Server wieder online', 'en': 'Server back online', 'fr': 'Serveur de nouveau en ligne', 'es': 'Servidor de nuevo en línea', 'pl': 'Serwer znowu online'},
@@ -181,10 +214,17 @@ class AppState extends ChangeNotifier {
   bool notificationsEnabled = false;
   bool notificationVibration = true;
   int notificationThreshold = 10;
+  Map<String, int> favoriteThresholds = {};
+  String notificationSound = 'default';
   int refreshIntervalMinutes = 5;
   bool uiSoundsEnabled = true;
+  bool hapticsEnabled = true;
+  double textScale = 1.0;
+  bool highContrast = false;
   Set<String> favorites = {};
+  List<String> searchHistory = [];
   bool onboardingDone = false;
+  bool tutorialSeen = false;
 
   bool get isDark {
     if (themeMode == 'auto') {
@@ -207,10 +247,20 @@ class AppState extends ChangeNotifier {
     notificationsEnabled = prefs.getBool('notificationsEnabled') ?? false;
     notificationVibration = prefs.getBool('notificationVibration') ?? true;
     notificationThreshold = prefs.getInt('notificationThreshold') ?? 10;
+    favoriteThresholds = {
+      for (final entry in prefs.getStringList('favoriteThresholds') ?? const [])
+        if (entry.contains(':')) entry.split(':').first: int.tryParse(entry.split(':').last) ?? notificationThreshold,
+    };
+    notificationSound = prefs.getString('notificationSound') ?? 'default';
     refreshIntervalMinutes = prefs.getInt('refreshIntervalMinutes') ?? 5;
     uiSoundsEnabled = prefs.getBool('uiSoundsEnabled') ?? true;
+    hapticsEnabled = prefs.getBool('hapticsEnabled') ?? true;
+    textScale = prefs.getDouble('textScale') ?? 1.0;
+    highContrast = prefs.getBool('highContrast') ?? false;
     favorites = (prefs.getStringList('favorites') ?? const []).toSet();
+    searchHistory = prefs.getStringList('searchHistory') ?? [];
     onboardingDone = prefs.getBool('onboardingDone') ?? false;
+    tutorialSeen = prefs.getBool('tutorialSeen') ?? false;
   }
 
   Future<void> _persist() async {
@@ -220,10 +270,27 @@ class AppState extends ChangeNotifier {
     await prefs.setBool('notificationsEnabled', notificationsEnabled);
     await prefs.setBool('notificationVibration', notificationVibration);
     await prefs.setInt('notificationThreshold', notificationThreshold);
+    await prefs.setStringList('favoriteThresholds', [for (final e in favoriteThresholds.entries) '${e.key}:${e.value}']);
+    await prefs.setString('notificationSound', notificationSound);
     await prefs.setInt('refreshIntervalMinutes', refreshIntervalMinutes);
     await prefs.setBool('uiSoundsEnabled', uiSoundsEnabled);
+    await prefs.setBool('hapticsEnabled', hapticsEnabled);
+    await prefs.setDouble('textScale', textScale);
+    await prefs.setBool('highContrast', highContrast);
     await prefs.setStringList('favorites', favorites.toList());
+    await prefs.setStringList('searchHistory', searchHistory);
     await prefs.setBool('onboardingDone', onboardingDone);
+    await prefs.setBool('tutorialSeen', tutorialSeen);
+  }
+
+  Future<void> addSearchTerm(String term) async {
+    final trimmed = term.trim();
+    if (trimmed.isEmpty) return;
+    searchHistory.removeWhere((t) => t.toLowerCase() == trimmed.toLowerCase());
+    searchHistory.insert(0, trimmed);
+    if (searchHistory.length > 5) searchHistory = searchHistory.sublist(0, 5);
+    notifyListeners();
+    await _persist();
   }
 
   Future<void> setLanguage(String lang) async {
@@ -250,6 +317,12 @@ class AppState extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> setNotificationSound(String value) async {
+    notificationSound = value;
+    notifyListeners();
+    await _persist();
+  }
+
   Future<void> setRefreshIntervalMinutes(int value) async {
     refreshIntervalMinutes = value;
     notifyListeners();
@@ -258,6 +331,24 @@ class AppState extends ChangeNotifier {
 
   Future<void> setUiSoundsEnabled(bool value) async {
     uiSoundsEnabled = value;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> setHapticsEnabled(bool value) async {
+    hapticsEnabled = value;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> setTextScale(double value) async {
+    textScale = value;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> setHighContrast(bool value) async {
+    highContrast = value;
     notifyListeners();
     await _persist();
   }
@@ -274,10 +365,31 @@ class AppState extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> completeTutorial() async {
+    tutorialSeen = true;
+    notifyListeners();
+    await _persist();
+  }
+
   bool isFavorite(String code) => favorites.contains(code);
 
+  int thresholdFor(String code) => favoriteThresholds[code] ?? notificationThreshold;
+
+  Future<void> setFavoriteThreshold(String code, int? value) async {
+    if (value == null) {
+      favoriteThresholds.remove(code);
+    } else {
+      favoriteThresholds[code] = value;
+    }
+    notifyListeners();
+    await _persist();
+  }
+
   Future<void> toggleFavorite(String code) async {
-    if (!favorites.add(code)) favorites.remove(code);
+    if (!favorites.add(code)) {
+      favorites.remove(code);
+      favoriteThresholds.remove(code);
+    }
     notifyListeners();
     await _persist();
   }
@@ -308,6 +420,20 @@ class SoundService {
       // Best-effort only.
     }
   }
+
+  static final AudioPlayer _previewPlayer = AudioPlayer();
+
+  // Explicit user-triggered preview of a notification tone choice in
+  // Settings - always plays regardless of the UI-sounds toggle, since the
+  // user tapped a "preview" control specifically to hear it.
+  static Future<void> previewNotificationSound(String sound) async {
+    if (sound == 'default') return;
+    try {
+      await _previewPlayer.play(AssetSource('sounds/notif_$sound.wav'), volume: 0.8);
+    } catch (_) {
+      // Best-effort only.
+    }
+  }
 }
 
 // Drop-in replacement for InkWell that also plays a short UI tap sound
@@ -330,19 +456,24 @@ class SoundInkWell extends StatelessWidget {
     required this.child,
   });
 
+  static void _feedback() {
+    SoundService.tap();
+    if (AppState.I.hapticsEnabled) HapticFeedback.selectionClick();
+  }
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap == null
           ? null
           : () {
-              SoundService.tap();
+              _feedback();
               onTap!();
             },
       onLongPress: onLongPress == null
           ? null
           : () {
-              SoundService.tap();
+              _feedback();
               onLongPress!();
             },
       borderRadius: borderRadius,
@@ -355,15 +486,26 @@ class SoundInkWell extends StatelessWidget {
 // Background favorite-player-count check + local notifications
 // ---------------------------------------------------------------------------
 
-Future<void> _showNotification(FlutterLocalNotificationsPlugin plugin, int id, String title, String body, {bool vibration = true}) async {
+Future<void> _showNotification(
+  FlutterLocalNotificationsPlugin plugin,
+  int id,
+  String title,
+  String body, {
+  bool vibration = true,
+  String sound = 'default',
+}) async {
+  // Android locks a channel's sound once created, so each sound choice
+  // gets its own channel id - switching the setting just routes future
+  // notifications to a different (lazily created) channel.
   final details = NotificationDetails(
     android: AndroidNotificationDetails(
-      'favorite_server_channel',
+      'favorite_server_channel_$sound',
       'Favoriten-Benachrichtigungen',
       channelDescription: 'Benachrichtigungen für favorisierte Server',
       importance: Importance.high,
       priority: Priority.high,
       enableVibration: vibration,
+      sound: sound == 'default' ? null : RawResourceAndroidNotificationSound('notif_$sound'),
     ),
   );
   await plugin.show(id, title, body, details);
@@ -378,7 +520,12 @@ void callbackDispatcher() {
       final favorites = prefs.getStringList('favorites') ?? const [];
       if (!enabled || favorites.isEmpty) return true;
       final threshold = prefs.getInt('notificationThreshold') ?? 10;
+      final favoriteThresholds = <String, int>{
+        for (final entry in prefs.getStringList('favoriteThresholds') ?? const [])
+          if (entry.contains(':')) entry.split(':').first: int.tryParse(entry.split(':').last) ?? threshold,
+      };
       final vibration = prefs.getBool('notificationVibration') ?? true;
+      final sound = prefs.getString('notificationSound') ?? 'default';
       final lang = prefs.getString('language') ?? 'de';
       String t(String key) => _strings[key]?[lang] ?? _strings[key]?['en'] ?? _strings[key]?['de'] ?? key;
 
@@ -421,6 +568,7 @@ void callbackDispatcher() {
               t('favoriteOfflineTitle'),
               t('favoriteOfflineBody').replaceAll('{name}', displayName),
               vibration: vibration,
+              sound: sound,
             );
           } else if (!wasOnline && isOnline) {
             await _showNotification(
@@ -429,17 +577,20 @@ void callbackDispatcher() {
               t('favoriteOnlineTitle'),
               t('favoriteOnlineBody').replaceAll('{name}', displayName),
               vibration: vibration,
+              sound: sound,
             );
           }
         }
 
-        if (isOnline && server.clients >= threshold) {
+        final effectiveThreshold = favoriteThresholds[code] ?? threshold;
+        if (isOnline && server.clients >= effectiveThreshold) {
           await _showNotification(
             plugin,
             notificationId++,
             displayName,
             t('favoriteThresholdBody').replaceAll('{clients}', '${server.clients}'),
             vibration: vibration,
+            sound: sound,
           );
         }
       }
@@ -492,6 +643,8 @@ void main() {
   });
 }
 
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 class FivemBrowserApp extends StatefulWidget {
   const FivemBrowserApp({super.key});
 
@@ -500,10 +653,29 @@ class FivemBrowserApp extends StatefulWidget {
 }
 
 class _FivemBrowserAppState extends State<FivemBrowserApp> with WidgetsBindingObserver {
+  final QuickActions _quickActions = QuickActions();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initQuickActions();
+  }
+
+  void _initQuickActions() {
+    _quickActions.initialize((shortcutType) {
+      final nav = appNavigatorKey.currentState;
+      if (nav == null) return;
+      if (shortcutType == 'serverlist') {
+        nav.push(MaterialPageRoute(builder: (_) => const ServerListPage()));
+      } else if (shortcutType == 'favorites') {
+        nav.push(MaterialPageRoute(builder: (_) => const FavoritesPage()));
+      }
+    });
+    _quickActions.setShortcutItems([
+      ShortcutItem(type: 'serverlist', localizedTitle: tr('serverList'), icon: 'ic_shortcut'),
+      ShortcutItem(type: 'favorites', localizedTitle: tr('favorites'), icon: 'ic_shortcut'),
+    ]);
   }
 
   @override
@@ -543,6 +715,7 @@ class _FivemBrowserAppState extends State<FivemBrowserApp> with WidgetsBindingOb
                 ),
         );
         return MaterialApp(
+          navigatorKey: appNavigatorKey,
           title: 'Fserver',
           debugShowCheckedModeBanner: false,
           theme: base.copyWith(
@@ -565,13 +738,19 @@ class _FivemBrowserAppState extends State<FivemBrowserApp> with WidgetsBindingOb
             splashFactory: NoSplash.splashFactory,
             highlightColor: Colors.transparent,
             textTheme: base.textTheme.apply(
-              bodyColor: kFg.withValues(alpha: 0.92),
+              bodyColor: kFgAlpha(0.92),
               displayColor: kFg,
               fontSizeFactor: 0.93,
             ),
-            dividerColor: kFg.withValues(alpha: 0.08),
+            dividerColor: kFgAlpha(0.08),
             useMaterial3: true,
           ),
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(AppState.I.textScale)),
+              child: child!,
+            );
+          },
           home: const SplashPage(),
         );
       },
@@ -618,6 +797,18 @@ class _SplashPageState extends State<SplashPage> {
 
 String stripColorCodes(String input) {
   return input.replaceAll(RegExp(r'\^[0-9]'), '');
+}
+
+// Thousand separators for large player counts (e.g. big FiveM servers
+// with 1024+ slots) - "." per common German/European convention.
+String fmtNum(int n) {
+  final s = n.toString();
+  final buf = StringBuffer();
+  for (var i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+    buf.write(s[i]);
+  }
+  return buf.toString();
 }
 
 int _asInt(dynamic v) {
@@ -1252,15 +1443,15 @@ class GlassPanel extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: borderRadius,
             border: Border.all(
-              color: kFg.withValues(alpha: borderOpacity),
+              color: kFgAlpha(borderOpacity),
               width: 1,
             ),
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                kFg.withValues(alpha: opacity + 0.03),
-                kFg.withValues(alpha: opacity * 0.3),
+                kFgAlpha(opacity + 0.03),
+                kFgAlpha(opacity * 0.3),
               ],
             ),
           ),
@@ -1276,6 +1467,7 @@ class Pill extends StatelessWidget {
   final bool active;
   final VoidCallback? onTap;
   final Color? tintColor;
+  final Widget? leading;
 
   const Pill({
     super.key,
@@ -1283,6 +1475,7 @@ class Pill extends StatelessWidget {
     this.active = false,
     this.onTap,
     this.tintColor,
+    this.leading,
   });
 
   @override
@@ -1295,22 +1488,108 @@ class Pill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(kRadius),
-          color: active ? color.withValues(alpha: 0.18) : kFg.withValues(alpha: 0.05),
+          color: active ? color.withValues(alpha: 0.18) : kFgAlpha(0.05),
           border: Border.all(
-            color: active ? color.withValues(alpha: 0.65) : kFg.withValues(alpha: 0.12),
+            color: active ? color.withValues(alpha: 0.65) : kFgAlpha(0.12),
             width: 1,
           ),
         ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 11,
-            height: 1,
-            color: active ? kFg : kFg.withValues(alpha: 0.75),
-            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (leading != null) ...[leading!, const SizedBox(width: 5)],
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: 11,
+                height: 1,
+                color: active ? kFg : kFgAlpha(0.75),
+                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+// Small custom-painted flag chips for the curated country list - plain
+// color blocks (no images, no emoji), since national flag designs are
+// public symbols with no copyright concern (unlike e.g. game map art).
+// Simplified on purpose (no coats of arms / crescent details) to stay
+// legible at chip size.
+class CountryFlag extends StatelessWidget {
+  final String code;
+  final double width;
+  const CountryFlag({super.key, required this.code, this.width = 18});
+
+  double get _height => width * 2 / 3;
+
+  static Widget _stripesH(List<Color> colors) {
+    return Column(children: colors.map((c) => Expanded(child: Container(color: c))).toList());
+  }
+
+  static Widget _stripesV(List<Color> colors) {
+    return Row(children: colors.map((c) => Expanded(child: Container(color: c))).toList());
+  }
+
+  Widget _flagFor(String code) {
+    switch (code) {
+      case 'DE':
+        return _stripesH([Colors.black, const Color(0xFFDD0000), const Color(0xFFFFCE00)]);
+      case 'IT':
+        return _stripesV([const Color(0xFF009246), Colors.white, const Color(0xFFCE2B37)]);
+      case 'FR':
+        return _stripesV([const Color(0xFF0055A4), Colors.white, const Color(0xFFEF4135)]);
+      case 'ES':
+        return _stripesH([const Color(0xFFAA151B), const Color(0xFFF1BF00), const Color(0xFFAA151B)]);
+      case 'PL':
+        return _stripesH([Colors.white, const Color(0xFFDC143C)]);
+      case 'NL':
+        return _stripesH([const Color(0xFFAE1C28), Colors.white, const Color(0xFF21468B)]);
+      case 'PT':
+        return Row(
+          children: [
+            Expanded(flex: 2, child: Container(color: const Color(0xFF006600))),
+            Expanded(flex: 3, child: Container(color: const Color(0xFFFF0000))),
+          ],
+        );
+      case 'TR':
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(color: const Color(0xFFE30A17)),
+            Center(
+              child: Container(
+                width: _height * 0.45,
+                height: _height * 0.45,
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              ),
+            ),
+          ],
+        );
+      case 'US':
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            _stripesH(List.generate(5, (i) => i.isEven ? const Color(0xFFB22234) : Colors.white)),
+            Align(
+              alignment: Alignment.topLeft,
+              child: Container(width: width * 0.4, height: _height * 0.55, color: const Color(0xFF3C3B6E)),
+            ),
+          ],
+        );
+      default:
+        return Container(color: Colors.grey.shade600);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(2),
+      child: SizedBox(width: width, height: _height, child: _flagFor(code)),
     );
   }
 }
@@ -1541,7 +1820,7 @@ class _ServerListPageState extends State<ServerListPage> {
                 '$count',
                 style: TextStyle(
                   fontSize: 13,
-                  color: kFg.withValues(alpha: 0.45),
+                  color: kFgAlpha(0.45),
                 ),
               ),
               const Spacer(),
@@ -1550,7 +1829,7 @@ class _ServerListPageState extends State<ServerListPage> {
                   padding: const EdgeInsets.only(right: 8),
                   child: Text(
                     _formatCountdown(_secondsUntilRefresh),
-                    style: TextStyle(fontSize: 11, color: kFg.withValues(alpha: 0.3)),
+                    style: TextStyle(fontSize: 11, color: kFgAlpha(0.3)),
                   ),
                 ),
               _iconButton(
@@ -1570,12 +1849,14 @@ class _ServerListPageState extends State<ServerListPage> {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
-                Icon(Icons.search, size: 18, color: kFg.withValues(alpha: 0.5)),
+                Icon(Icons.search, size: 18, color: kFgAlpha(0.5)),
                 const SizedBox(width: 6),
                 Expanded(
                   child: TextField(
                     controller: _searchCtrl,
                     style: const TextStyle(fontSize: 14),
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (v) => AppState.I.addSearchTerm(v),
                     decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
@@ -1586,11 +1867,28 @@ class _ServerListPageState extends State<ServerListPage> {
                 if (_searchCtrl.text.isNotEmpty)
                   SoundInkWell(
                     onTap: () => _searchCtrl.clear(),
-                    child: Icon(Icons.close, size: 16, color: kFg.withValues(alpha: 0.5)),
+                    child: Icon(Icons.close, size: 16, color: kFgAlpha(0.5)),
                   ),
               ],
             ),
           ),
+          if (_searchCtrl.text.isEmpty && AppState.I.searchHistory.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: AppState.I.searchHistory.map((term) {
+                return Pill(
+                  text: term,
+                  leading: Icon(Icons.history, size: 12, color: kFgAlpha(0.5)),
+                  onTap: () {
+                    _searchCtrl.text = term;
+                    _searchCtrl.selection = TextSelection.fromPosition(TextPosition(offset: term.length));
+                  },
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );
@@ -1602,7 +1900,7 @@ class _ServerListPageState extends State<ServerListPage> {
       opacity: active ? 0.14 : 0.05,
       child: SoundInkWell(
         onTap: onTap,
-        child: Icon(icon, size: 18, color: active ? kAccent : kFg.withValues(alpha: 0.8)),
+        child: Icon(icon, size: 18, color: active ? kAccent : kFgAlpha(0.8)),
       ),
     );
   }
@@ -1684,7 +1982,7 @@ class _ServerListPageState extends State<ServerListPage> {
                 max: kPlayerRangeMax,
                 divisions: 32,
                 activeColor: kAccent,
-                inactiveColor: kFg.withValues(alpha: 0.12),
+                inactiveColor: kFgAlpha(0.12),
                 onChanged: (v) => setState(() => _playerRange = v),
               ),
             ),
@@ -1699,6 +1997,7 @@ class _ServerListPageState extends State<ServerListPage> {
                   final active = _selectedCountry == c;
                   return Pill(
                     text: c,
+                    leading: CountryFlag(code: c, width: 16),
                     active: active,
                     onTap: () => setState(() {
                       _selectedCountry = active ? null : c;
@@ -1738,7 +2037,7 @@ class _ServerListPageState extends State<ServerListPage> {
         fontSize: 10.5,
         letterSpacing: 0.6,
         fontWeight: FontWeight.w600,
-        color: kFg.withValues(alpha: 0.4),
+        color: kFgAlpha(0.4),
       ),
     );
   }
@@ -1754,7 +2053,7 @@ class _ServerListPageState extends State<ServerListPage> {
             Text(
               'Lade komplette Serverliste…\ndas kann bis zu 30 Sekunden dauern',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.45)),
+              style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.45)),
             ),
           ],
         ),
@@ -1767,12 +2066,12 @@ class _ServerListPageState extends State<ServerListPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.wifi_off, color: kFg.withValues(alpha: 0.35), size: 36),
+              Icon(Icons.wifi_off, color: kFgAlpha(0.35), size: 36),
               const SizedBox(height: 10),
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: kFg.withValues(alpha: 0.6), fontSize: 13),
+                style: TextStyle(color: kFgAlpha(0.6), fontSize: 13),
               ),
               const SizedBox(height: 14),
               GlassPanel(
@@ -1792,7 +2091,7 @@ class _ServerListPageState extends State<ServerListPage> {
       return Center(
         child: Text(
           tr('noServersFound'),
-          style: TextStyle(color: kFg.withValues(alpha: 0.4), fontSize: 13),
+          style: TextStyle(color: kFgAlpha(0.4), fontSize: 13),
         ),
       );
     }
@@ -1852,7 +2151,7 @@ class ServerTile extends StatelessWidget {
               Icon(
                 selected ? Icons.check_circle : Icons.radio_button_unchecked,
                 size: 22,
-                color: selected ? kAccent : kFg.withValues(alpha: 0.3),
+                color: selected ? kAccent : kFgAlpha(0.3),
               ),
               const SizedBox(width: 10),
             ],
@@ -1896,7 +2195,7 @@ class ServerTile extends StatelessWidget {
                       children: server.vars.tags.take(3).map((t) {
                         return Text(
                           t,
-                          style: TextStyle(fontSize: 10.5, color: kFg.withValues(alpha: 0.4)),
+                          style: TextStyle(fontSize: 10.5, color: kFgAlpha(0.4)),
                         );
                       }).toList(),
                     ),
@@ -1911,17 +2210,17 @@ class ServerTile extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.public, size: 11, color: kFg.withValues(alpha: 0.35)),
-                      const SizedBox(width: 3),
+                      CountryFlag(code: server.countryGroup!, width: 14),
+                      const SizedBox(width: 4),
                       Text(
                         server.countryGroup!,
-                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: kFg.withValues(alpha: 0.45), letterSpacing: 0.4),
+                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: kFgAlpha(0.45), letterSpacing: 0.4),
                       ),
                     ],
                   ),
                 const SizedBox(height: 4),
                 Text(
-                  '${server.clients}/${server.svMaxclients}',
+                  '${fmtNum(server.clients)}/${fmtNum(server.svMaxclients)}',
                   style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
@@ -1991,9 +2290,9 @@ class _ServerIcon extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(kRadius),
-        color: kFg.withValues(alpha: 0.05),
+        color: kFgAlpha(0.05),
       ),
-      child: Icon(Icons.dns_outlined, size: size * 0.5, color: kFg.withValues(alpha: 0.3)),
+      child: Icon(Icons.dns_outlined, size: size * 0.5, color: kFgAlpha(0.3)),
     );
   }
 }
@@ -2069,6 +2368,38 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
     Share.share('${_server.hostname}\n${_server.joinUrl}');
   }
 
+  Widget _detailStepperButton(IconData icon, VoidCallback onTap) {
+    return SoundInkWell(
+      borderRadius: BorderRadius.circular(kRadius),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Icon(icon, size: 15, color: kAccent),
+      ),
+    );
+  }
+
+  void _copyAllInfo() {
+    final s = _server;
+    final lines = [
+      s.hostname,
+      s.joinUrl,
+      '${tr('players')}: ${fmtNum(s.clients)}/${fmtNum(s.svMaxclients)}',
+      if (s.gametype.isNotEmpty) '${tr('gametype')}: ${s.gametype}',
+      if (s.mapname.isNotEmpty) '${tr('map')}: ${s.mapname}',
+      if (s.vars.tags.isNotEmpty) '${tr('tags')}: ${s.vars.tags.join(', ')}',
+    ];
+    Clipboard.setData(ClipboardData(text: lines.join('\n')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: kSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadius)),
+        content: Text(tr('copied'), style: const TextStyle(fontSize: 13)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _server;
@@ -2123,7 +2454,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                                 const SizedBox(height: 2),
                                 Text(
                                   s.vars.projectName!,
-                                  style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5)),
+                                  style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.5)),
                                 ),
                               ],
                             ],
@@ -2174,7 +2505,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('${s.clients}/${s.svMaxclients}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              Text('${fmtNum(s.clients)}/${fmtNum(s.svMaxclients)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                             ],
                           ),
                         ),
@@ -2184,11 +2515,62 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                           onTap: _shareJoin,
                           child: GlassPanel(
                             padding: const EdgeInsets.all(10),
-                            child: Icon(Icons.share_outlined, size: 17, color: kFg.withValues(alpha: 0.85)),
+                            child: Icon(Icons.share_outlined, size: 17, color: kFgAlpha(0.85)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SoundInkWell(
+                          borderRadius: BorderRadius.circular(kRadius),
+                          onTap: _copyAllInfo,
+                          child: GlassPanel(
+                            padding: const EdgeInsets.all(10),
+                            child: Icon(Icons.content_copy_outlined, size: 17, color: kFgAlpha(0.85)),
                           ),
                         ),
                       ],
                     ),
+                    if (AppState.I.isFavorite(s.code) && AppState.I.notificationsEnabled) ...[
+                      const SizedBox(height: 8),
+                      GlassPanel(
+                        opacity: 0.08,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${tr('favoriteThreshold')}: ${AppState.I.thresholdFor(s.code)}',
+                                style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.7)),
+                              ),
+                            ),
+                            _detailStepperButton(Icons.remove, () {
+                              final v = (AppState.I.thresholdFor(s.code) - 5).clamp(1, 9999);
+                              AppState.I.setFavoriteThreshold(s.code, v);
+                              setState(() {});
+                            }),
+                            const SizedBox(width: 6),
+                            _detailStepperButton(Icons.add, () {
+                              final v = (AppState.I.thresholdFor(s.code) + 5).clamp(1, 9999);
+                              AppState.I.setFavoriteThreshold(s.code, v);
+                              setState(() {});
+                            }),
+                            if (AppState.I.favoriteThresholds.containsKey(s.code)) ...[
+                              const SizedBox(width: 6),
+                              SoundInkWell(
+                                borderRadius: BorderRadius.circular(kRadius),
+                                onTap: () {
+                                  AppState.I.setFavoriteThreshold(s.code, null);
+                                  setState(() {});
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: Icon(Icons.replay, size: 15, color: kFgAlpha(0.6)),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                   ],
                 ),
@@ -2202,7 +2584,7 @@ class _ServerDetailPageState extends State<ServerDetailPage> with SingleTickerPr
                   indicatorColor: kAccent,
                   indicatorWeight: 2,
                   labelColor: kFg,
-                  unselectedLabelColor: kFg.withValues(alpha: 0.4),
+                  unselectedLabelColor: kFgAlpha(0.4),
                   labelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
                   tabs: [
                     Tab(text: tr('overview')),
@@ -2312,7 +2694,7 @@ class _OverviewTab extends StatelessWidget {
           GlassPanel(
             child: Text(
               s.vars.projectDesc!,
-              style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75), height: 1.4),
+              style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75), height: 1.4),
             ),
           ),
           const SizedBox(height: 10),
@@ -2325,7 +2707,7 @@ class _OverviewTab extends StatelessWidget {
               _divider(),
               _statRow(tr('map'), s.mapname.isEmpty ? '—' : s.mapname),
               _divider(),
-              _statRow(tr('players'), '${s.clients} / ${s.svMaxclients}'),
+              _statRow(tr('players'), '${fmtNum(s.clients)} / ${fmtNum(s.svMaxclients)}'),
               _divider(),
               _statRow(tr('boost'), '${s.upvotePower}'),
               _divider(),
@@ -2347,7 +2729,7 @@ class _OverviewTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tr('tags').toUpperCase(), style: TextStyle(fontSize: 10.5, letterSpacing: 0.6, fontWeight: FontWeight.w600, color: kFg.withValues(alpha: 0.4))),
+                Text(tr('tags').toUpperCase(), style: TextStyle(fontSize: 10.5, letterSpacing: 0.6, fontWeight: FontWeight.w600, color: kFgAlpha(0.4))),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 6,
@@ -2382,7 +2764,7 @@ class _OverviewTab extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5))),
+            child: Text(label, style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.5))),
           ),
           Text(value, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
         ],
@@ -2398,7 +2780,7 @@ class _OverviewTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 11.5, color: kFg.withValues(alpha: 0.45))),
+          Text(label, style: TextStyle(fontSize: 11.5, color: kFgAlpha(0.45))),
           const SizedBox(height: 2),
           Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
         ],
@@ -2406,7 +2788,7 @@ class _OverviewTab extends StatelessWidget {
     );
   }
 
-  Widget _divider() => Divider(height: 1, color: kFg.withValues(alpha: 0.06));
+  Widget _divider() => Divider(height: 1, color: kFgAlpha(0.06));
 }
 
 class _ScriptsTab extends StatelessWidget {
@@ -2428,7 +2810,7 @@ class _ScriptsTab extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
-                Icon(Icons.search, size: 16, color: kFg.withValues(alpha: 0.5)),
+                Icon(Icons.search, size: 16, color: kFgAlpha(0.5)),
                 const SizedBox(width: 6),
                 Expanded(
                   child: TextField(
@@ -2441,7 +2823,7 @@ class _ScriptsTab extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text('${filtered.length}/${resources.length}', style: TextStyle(fontSize: 11, color: kFg.withValues(alpha: 0.4))),
+                Text('${filtered.length}/${resources.length}', style: TextStyle(fontSize: 11, color: kFgAlpha(0.4))),
               ],
             ),
           ),
@@ -2449,7 +2831,7 @@ class _ScriptsTab extends StatelessWidget {
         Expanded(
           child: filtered.isEmpty
               ? Center(
-                  child: Text(tr('noScriptsFound'), style: TextStyle(color: kFg.withValues(alpha: 0.4), fontSize: 13)),
+                  child: Text(tr('noScriptsFound'), style: TextStyle(color: kFgAlpha(0.4), fontSize: 13)),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -2460,7 +2842,7 @@ class _ScriptsTab extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                       child: Row(
                         children: [
-                          Icon(Icons.extension_outlined, size: 15, color: kFg.withValues(alpha: 0.4)),
+                          Icon(Icons.extension_outlined, size: 15, color: kFgAlpha(0.4)),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(filtered[index], style: const TextStyle(fontSize: 12.5), maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -2528,7 +2910,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               const SizedBox(height: 6),
               Text(
                 _step == 0 ? tr('onboardingLanguage') : tr('onboardingTheme'),
-                style: TextStyle(fontSize: 14, color: kFg.withValues(alpha: 0.55)),
+                style: TextStyle(fontSize: 14, color: kFgAlpha(0.55)),
               ),
               const SizedBox(height: 28),
               if (_step == 0) _buildLanguageStep() else _buildThemeStep(),
@@ -2598,7 +2980,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         child: Row(
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 20, color: kFg.withValues(alpha: 0.85)),
+              Icon(icon, size: 20, color: kFgAlpha(0.85)),
               const SizedBox(width: 12),
             ],
             Expanded(
@@ -2635,6 +3017,152 @@ String? regionForLanguage(String lang) {
   }
 }
 
+class TutorialStep {
+  final GlobalKey targetKey;
+  final String titleKey;
+  final String descKey;
+  const TutorialStep({required this.targetKey, required this.titleKey, required this.descKey});
+}
+
+class _SpotlightPainter extends CustomPainter {
+  final Rect? rect;
+  const _SpotlightPainter({this.rect});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final overlay = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final paint = Paint()..color = Colors.black.withValues(alpha: 0.72);
+    if (rect == null) {
+      canvas.drawPath(overlay, paint);
+      return;
+    }
+    final hole = Path()..addRRect(RRect.fromRectAndRadius(rect!.inflate(6), const Radius.circular(16)));
+    canvas.drawPath(Path.combine(PathOperation.difference, overlay, hole), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SpotlightPainter oldDelegate) => oldDelegate.rect != rect;
+}
+
+// First-run coach-mark overlay: sequentially spotlights the given target
+// widgets (via their GlobalKeys) with a caption + Next/Skip controls. No
+// external tutorial package - just Overlay + CustomPaint, since the app
+// only needs 3 fixed steps on the main menu.
+class TutorialOverlay extends StatefulWidget {
+  final List<TutorialStep> steps;
+  final VoidCallback onFinished;
+  const TutorialOverlay({super.key, required this.steps, required this.onFinished});
+
+  @override
+  State<TutorialOverlay> createState() => _TutorialOverlayState();
+}
+
+class _TutorialOverlayState extends State<TutorialOverlay> {
+  int _index = 0;
+
+  Rect? _targetRect() {
+    final ctx = widget.steps[_index].targetKey.currentContext;
+    if (ctx == null) return null;
+    final box = ctx.findRenderObject();
+    if (box is! RenderBox || !box.attached) return null;
+    final pos = box.localToGlobal(Offset.zero);
+    return Rect.fromLTWH(pos.dx, pos.dy, box.size.width, box.size.height);
+  }
+
+  void _advance() {
+    SoundService.tap();
+    if (_index >= widget.steps.length - 1) {
+      widget.onFinished();
+    } else {
+      setState(() => _index++);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rect = _targetRect();
+    final step = widget.steps[_index];
+    final screen = MediaQuery.of(context).size;
+    final captionTop = rect == null
+        ? screen.height * 0.4
+        : (rect.bottom + 150 < screen.height ? rect.bottom + 16 : (rect.top - 140).clamp(16.0, screen.height - 160));
+
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _advance,
+              child: CustomPaint(painter: _SpotlightPainter(rect: rect), child: const SizedBox.expand()),
+            ),
+          ),
+          if (rect != null)
+            Positioned(
+              left: rect.left - 6,
+              top: rect.top - 6,
+              child: IgnorePointer(
+                child: Container(
+                  width: rect.width + 12,
+                  height: rect.height + 12,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: kAccent, width: 2),
+                    borderRadius: BorderRadius.circular(kRadius + 4),
+                  ),
+                ),
+              ),
+            ),
+          Positioned(
+            left: 20,
+            right: 20,
+            top: captionTop,
+            child: GlassPanel(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(tr(step.titleKey), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Text(tr(step.descKey), style: TextStyle(fontSize: 13, color: kFgAlpha(0.75))),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      SoundInkWell(
+                        borderRadius: BorderRadius.circular(kRadius),
+                        onTap: widget.onFinished,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          child: Text(tr('tutorialSkip'), style: TextStyle(fontSize: 13, color: kFgAlpha(0.5))),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text('${_index + 1}/${widget.steps.length}', style: TextStyle(fontSize: 12, color: kFgAlpha(0.4))),
+                      const SizedBox(width: 12),
+                      SoundInkWell(
+                        borderRadius: BorderRadius.circular(kRadius),
+                        onTap: _advance,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(color: kAccent, borderRadius: BorderRadius.circular(kRadius)),
+                          child: Text(
+                            _index >= widget.steps.length - 1 ? tr('tutorialDone') : tr('tutorialNext'),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class MainMenuPage extends StatefulWidget {
   const MainMenuPage({super.key});
 
@@ -2644,11 +3172,43 @@ class MainMenuPage extends StatefulWidget {
 
 class _MainMenuPageState extends State<MainMenuPage> {
   List<GameServer>? _topServers;
+  final _serverListKey = GlobalKey();
+  final _favoritesKey = GlobalKey();
+  final _settingsKey = GlobalKey();
+  OverlayEntry? _tutorialEntry;
 
   @override
   void initState() {
     super.initState();
     _loadTopServers();
+    if (!AppState.I.tutorialSeen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial());
+    }
+  }
+
+  void _showTutorial() {
+    if (!mounted || _tutorialEntry != null) return;
+    final steps = [
+      TutorialStep(targetKey: _serverListKey, titleKey: 'tutorialServerListTitle', descKey: 'tutorialServerListDesc'),
+      TutorialStep(targetKey: _favoritesKey, titleKey: 'tutorialFavoritesTitle', descKey: 'tutorialFavoritesDesc'),
+      TutorialStep(targetKey: _settingsKey, titleKey: 'tutorialSettingsTitle', descKey: 'tutorialSettingsDesc'),
+    ];
+    _tutorialEntry = OverlayEntry(
+      builder: (_) => TutorialOverlay(steps: steps, onFinished: _dismissTutorial),
+    );
+    Overlay.of(context).insert(_tutorialEntry!);
+  }
+
+  void _dismissTutorial() {
+    _tutorialEntry?.remove();
+    _tutorialEntry = null;
+    AppState.I.completeTutorial();
+  }
+
+  @override
+  void dispose() {
+    _tutorialEntry?.remove();
+    super.dispose();
   }
 
   Future<void> _loadTopServers() async {
@@ -2683,22 +3243,28 @@ class _MainMenuPageState extends State<MainMenuPage> {
                     style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -0.3),
                   ),
                   const SizedBox(height: 24),
-                  _MenuCard(
-                    icon: Icons.dns,
-                    title: tr('serverList'),
-                    subtitle: tr('serverListSubtitle'),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ServerListPage()),
+                  KeyedSubtree(
+                    key: _serverListKey,
+                    child: _MenuCard(
+                      icon: Icons.dns,
+                      title: tr('serverList'),
+                      subtitle: tr('serverListSubtitle'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ServerListPage()),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _MenuCard(
-                    icon: Icons.star,
-                    title: tr('favorites'),
-                    subtitle: tr('favoritesSubtitle'),
-                    badge: AppState.I.favorites.isEmpty ? null : '${AppState.I.favorites.length}',
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const FavoritesPage()),
+                  KeyedSubtree(
+                    key: _favoritesKey,
+                    child: _MenuCard(
+                      icon: Icons.star,
+                      title: tr('favorites'),
+                      subtitle: tr('favoritesSubtitle'),
+                      badge: AppState.I.favorites.isEmpty ? null : '${AppState.I.favorites.length}',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const FavoritesPage()),
+                      ),
                     ),
                   ),
                   if (_topServers != null && _topServers!.isNotEmpty) ...[
@@ -2709,7 +3275,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
                         fontSize: 10.5,
                         letterSpacing: 0.6,
                         fontWeight: FontWeight.w600,
-                        color: kFg.withValues(alpha: 0.4),
+                        color: kFgAlpha(0.4),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -2730,14 +3296,17 @@ class _MainMenuPageState extends State<MainMenuPage> {
                   const SizedBox(height: 12),
                   Align(
                     alignment: Alignment.bottomRight,
-                    child: SoundInkWell(
-                      borderRadius: BorderRadius.circular(kRadius),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SettingsPage()),
-                      ),
-                      child: GlassPanel(
-                        padding: const EdgeInsets.all(12),
-                        child: Icon(Icons.settings_outlined, size: 22, color: kFg.withValues(alpha: 0.85)),
+                    child: KeyedSubtree(
+                      key: _settingsKey,
+                      child: SoundInkWell(
+                        borderRadius: BorderRadius.circular(kRadius),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SettingsPage()),
+                        ),
+                        child: GlassPanel(
+                          padding: const EdgeInsets.all(12),
+                          child: Icon(Icons.settings_outlined, size: 22, color: kFgAlpha(0.85)),
+                        ),
                       ),
                     ),
                   ),
@@ -2793,7 +3362,7 @@ class _MenuCard extends StatelessWidget {
                 children: [
                   Text(title, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 3),
-                  Text(subtitle, style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5))),
+                  Text(subtitle, style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.5))),
                 ],
               ),
             ),
@@ -2808,7 +3377,7 @@ class _MenuCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
             ],
-            Icon(Icons.chevron_right, color: kFg.withValues(alpha: 0.35)),
+            Icon(Icons.chevron_right, color: kFgAlpha(0.35)),
           ],
         ),
       ),
@@ -2935,7 +3504,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           child: Text(
             tr('noFavoritesYet'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: kFg.withValues(alpha: 0.4), fontSize: 13),
+            style: TextStyle(color: kFgAlpha(0.4), fontSize: 13),
           ),
         ),
       );
@@ -2950,9 +3519,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.wifi_off, color: kFg.withValues(alpha: 0.35), size: 32),
+              Icon(Icons.wifi_off, color: kFgAlpha(0.35), size: 32),
               const SizedBox(height: 10),
-              Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: kFg.withValues(alpha: 0.6), fontSize: 13)),
+              Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: kFgAlpha(0.6), fontSize: 13)),
               const SizedBox(height: 14),
               SoundInkWell(
                 onTap: _load,
@@ -2969,7 +3538,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     }
     if (_favoriteServers.isEmpty) {
       return Center(
-        child: Text(tr('noFavoritesYet'), textAlign: TextAlign.center, style: TextStyle(color: kFg.withValues(alpha: 0.4), fontSize: 13)),
+        child: Text(tr('noFavoritesYet'), textAlign: TextAlign.center, style: TextStyle(color: kFgAlpha(0.4), fontSize: 13)),
       );
     }
     return RefreshIndicator(
@@ -3074,7 +3643,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             },
                             child: Row(
                               children: [
-                                Icon(themeModeIcon(mode), size: 19, color: kFg.withValues(alpha: 0.85)),
+                                Icon(themeModeIcon(mode), size: 19, color: kFgAlpha(0.85)),
                                 const SizedBox(width: 12),
                                 Expanded(child: Text(label, style: const TextStyle(fontSize: 13.5))),
                                 if (active) Icon(Icons.check_circle, size: 17, color: kAccent),
@@ -3083,6 +3652,53 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                         );
                       }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _sectionLabel(tr('textSize')),
+                  const SizedBox(height: 8),
+                  GlassPanel(
+                    child: Row(
+                      children: [
+                        (tr('textSizeSmall'), 0.9),
+                        (tr('textSizeNormal'), 1.0),
+                        (tr('textSizeLarge'), 1.15),
+                      ].map((opt) {
+                        final (label, value) = opt;
+                        return Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 3),
+                            child: Pill(
+                              text: label,
+                              active: AppState.I.textScale == value,
+                              onTap: () {
+                                AppState.I.setTextScale(value);
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _sectionLabel(tr('highContrast')),
+                  const SizedBox(height: 8),
+                  GlassPanel(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(tr('highContrastDesc'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75))),
+                        ),
+                        Switch(
+                          value: AppState.I.highContrast,
+                          activeColor: kAccent,
+                          onChanged: (v) {
+                            AppState.I.setHighContrast(v);
+                            setState(() {});
+                          },
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -3095,7 +3711,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         Row(
                           children: [
                             Expanded(
-                              child: Text(tr('notificationsDesc'), style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75))),
+                              child: Text(tr('notificationsDesc'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75))),
                             ),
                             Switch(
                               value: AppState.I.notificationsEnabled,
@@ -3109,8 +3725,8 @@ class _SettingsPageState extends State<SettingsPage> {
                           ],
                         ),
                         if (AppState.I.notificationsEnabled) ...[
-                          Divider(height: 20, color: kFg.withValues(alpha: 0.06)),
-                          Text(tr('notificationThreshold'), style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5))),
+                          Divider(height: 20, color: kFgAlpha(0.06)),
+                          Text(tr('notificationThreshold'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.5))),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -3134,11 +3750,46 @@ class _SettingsPageState extends State<SettingsPage> {
                               }),
                             ],
                           ),
-                          Divider(height: 20, color: kFg.withValues(alpha: 0.06)),
+                          Divider(height: 20, color: kFgAlpha(0.06)),
+                          Text(tr('notificationSound'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.5))),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              for (final sound in const ['default', 'chime', 'bell']) ...[
+                                Expanded(
+                                  child: SoundInkWell(
+                                    borderRadius: BorderRadius.circular(kRadius),
+                                    onTap: () {
+                                      AppState.I.setNotificationSound(sound);
+                                      SoundService.previewNotificationSound(sound);
+                                      setState(() {});
+                                    },
+                                    child: GlassPanel(
+                                      opacity: AppState.I.notificationSound == sound ? 0.22 : 0.08,
+                                      borderOpacity: AppState.I.notificationSound == sound ? 0.6 : 0.2,
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      child: Center(
+                                        child: Text(
+                                          tr('sound${sound[0].toUpperCase()}${sound.substring(1)}'),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: AppState.I.notificationSound == sound ? FontWeight.w700 : FontWeight.w500,
+                                            color: AppState.I.notificationSound == sound ? kAccent : kFgAlpha(0.7),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                if (sound != 'bell') const SizedBox(width: 8),
+                              ],
+                            ],
+                          ),
+                          Divider(height: 20, color: kFgAlpha(0.06)),
                           Row(
                             children: [
                               Expanded(
-                                child: Text(tr('vibrationDesc'), style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75))),
+                                child: Text(tr('vibrationDesc'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75))),
                               ),
                               Switch(
                                 value: AppState.I.notificationVibration,
@@ -3162,7 +3813,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(tr('autoRefreshDesc'), style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5))),
+                        Text(tr('autoRefreshDesc'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.5))),
                         const SizedBox(height: 8),
                         Row(
                           children: [
@@ -3196,7 +3847,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text(tr('uiSoundsDesc'), style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75))),
+                          child: Text(tr('uiSoundsDesc'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75))),
                         ),
                         Switch(
                           value: AppState.I.uiSoundsEnabled,
@@ -3204,6 +3855,27 @@ class _SettingsPageState extends State<SettingsPage> {
                           onChanged: (v) {
                             AppState.I.setUiSoundsEnabled(v);
                             if (v) SoundService.tap(); // audible confirmation when turning sounds on
+                            setState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _sectionLabel(tr('haptics')),
+                  const SizedBox(height: 8),
+                  GlassPanel(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(tr('hapticsDesc'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75))),
+                        ),
+                        Switch(
+                          value: AppState.I.hapticsEnabled,
+                          activeColor: kAccent,
+                          onChanged: (v) {
+                            AppState.I.setHapticsEnabled(v);
+                            if (v) HapticFeedback.selectionClick();
                             setState(() {});
                           },
                         ),
@@ -3222,7 +3894,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           Expanded(
                             child: Text(tr('about'), style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
                           ),
-                          Icon(Icons.chevron_right, color: kFg.withValues(alpha: 0.35)),
+                          Icon(Icons.chevron_right, color: kFgAlpha(0.35)),
                         ],
                       ),
                     ),
@@ -3255,7 +3927,7 @@ class _SettingsPageState extends State<SettingsPage> {
         fontSize: 10.5,
         letterSpacing: 0.6,
         fontWeight: FontWeight.w600,
-        color: kFg.withValues(alpha: 0.4),
+        color: kFgAlpha(0.4),
       ),
     );
   }
@@ -3309,7 +3981,7 @@ class AboutPage extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${tr('aboutVersion')} $kAppVersion',
-                          style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5)),
+                          style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.5)),
                         ),
                       ],
                     ),
@@ -3319,7 +3991,7 @@ class AboutPage extends StatelessWidget {
                     child: Text(
                       tr('aboutCredits'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75), height: 1.4),
+                      style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75), height: 1.4),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -3327,7 +3999,7 @@ class AboutPage extends StatelessWidget {
                     child: Text(
                       tr('aboutContact'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.75), height: 1.4),
+                      style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.75), height: 1.4),
                     ),
                   ),
                 ],

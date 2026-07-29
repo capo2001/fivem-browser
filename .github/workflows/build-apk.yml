@@ -30,6 +30,17 @@ jobs:
           flutter create --platforms=android --project-name fivem_browser --org de.gio.fivembrowser /tmp/shell
           cp -r /tmp/shell/android ./android
 
+      - name: Add notification sound resources
+        run: |
+          mkdir -p android/app/src/main/res/raw
+          cp assets/sounds/notif_chime.wav android/app/src/main/res/raw/notif_chime.wav
+          cp assets/sounds/notif_bell.wav android/app/src/main/res/raw/notif_bell.wav
+
+      - name: Add app-shortcut icon resource
+        run: |
+          mkdir -p android/app/src/main/res/drawable
+          cp assets/icon/app_icon.png android/app/src/main/res/drawable/ic_shortcut.png
+
       - name: Ensure required permissions are declared
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
