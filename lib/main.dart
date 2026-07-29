@@ -116,6 +116,8 @@ const Map<String, Map<String, String>> _strings = {
   'notifications': {'de': 'Benachrichtigungen', 'en': 'Notifications', 'fr': 'Notifications', 'es': 'Notificaciones', 'pl': 'Powiadomienia'},
   'notificationsDesc': {'de': 'Benachrichtigung senden, wenn ein favorisierter Server genug Spieler hat', 'en': 'Notify me when a favorite server has enough players', 'fr': "M'avertir quand un serveur favori a assez de joueurs", 'es': 'Avisarme cuando un servidor favorito tenga suficientes jugadores', 'pl': 'Powiadom mnie, gdy ulubiony serwer ma wystarczająco graczy'},
   'notificationThreshold': {'de': 'Ab wie vielen Spielern benachrichtigen', 'en': 'Notify from this many players', 'fr': 'Notifier à partir de ce nombre de joueurs', 'es': 'Notificar a partir de esta cantidad de jugadores', 'pl': 'Powiadamiaj od tylu graczy'},
+  'autoRefresh': {'de': 'Auto-Aktualisierung', 'en': 'Auto-refresh', 'fr': 'Actualisation automatique', 'es': 'Actualización automática', 'pl': 'Automatyczne odświeżanie'},
+  'autoRefreshDesc': {'de': 'Wie oft sich die Serverliste im Hintergrund selbst aktualisiert', 'en': 'How often the server list refreshes itself automatically', 'fr': 'À quelle fréquence la liste des serveurs se rafraîchit automatiquement', 'es': 'Con qué frecuencia se actualiza automáticamente la lista de servidores', 'pl': 'Jak często lista serwerów odświeża się automatycznie'},
   'back': {'de': 'Zurück', 'en': 'Back', 'fr': 'Retour', 'es': 'Atrás', 'pl': 'Wstecz'},
   'unreachable': {'de': 'Live-Details nicht erreichbar', 'en': 'Live details unreachable', 'fr': 'Détails en direct indisponibles', 'es': 'Detalles en vivo no disponibles', 'pl': 'Brak dostępu do szczegółów na żywo'},
   'topServersNearYou': {'de': 'Top 3 in deiner Region', 'en': 'Top 3 in your region', 'fr': 'Top 3 dans ta région', 'es': 'Top 3 en tu región', 'pl': 'Top 3 w Twoim regionie'},
@@ -170,6 +172,7 @@ class AppState extends ChangeNotifier {
   bool notificationsEnabled = false;
   bool notificationVibration = true;
   int notificationThreshold = 10;
+  int refreshIntervalMinutes = 5;
   Set<String> favorites = {};
   bool onboardingDone = false;
 
@@ -194,6 +197,7 @@ class AppState extends ChangeNotifier {
     notificationsEnabled = prefs.getBool('notificationsEnabled') ?? false;
     notificationVibration = prefs.getBool('notificationVibration') ?? true;
     notificationThreshold = prefs.getInt('notificationThreshold') ?? 10;
+    refreshIntervalMinutes = prefs.getInt('refreshIntervalMinutes') ?? 5;
     favorites = (prefs.getStringList('favorites') ?? const []).toSet();
     onboardingDone = prefs.getBool('onboardingDone') ?? false;
   }
@@ -205,6 +209,7 @@ class AppState extends ChangeNotifier {
     await prefs.setBool('notificationsEnabled', notificationsEnabled);
     await prefs.setBool('notificationVibration', notificationVibration);
     await prefs.setInt('notificationThreshold', notificationThreshold);
+    await prefs.setInt('refreshIntervalMinutes', refreshIntervalMinutes);
     await prefs.setStringList('favorites', favorites.toList());
     await prefs.setBool('onboardingDone', onboardingDone);
   }
@@ -229,6 +234,12 @@ class AppState extends ChangeNotifier {
 
   Future<void> setNotificationThreshold(int value) async {
     notificationThreshold = value;
+    notifyListeners();
+    await _persist();
+  }
+
+  Future<void> setRefreshIntervalMinutes(int value) async {
+    refreshIntervalMinutes = value;
     notifyListeners();
     await _persist();
   }
@@ -1197,23 +1208,30 @@ class _ServerListPageState extends State<ServerListPage> {
   final Map<String, TagState> _tagStates = {};
   SortMode _sortMode = SortMode.defaultOrder;
   RangeValues _playerRange = const RangeValues(0, kPlayerRangeMax);
-  Timer? _autoRefreshTimer;
   Timer? _countdownTimer;
-  static const int _autoRefreshSeconds = 60;
-  int _secondsUntilRefresh = _autoRefreshSeconds;
+  int _secondsUntilRefresh = 0;
+
+  int get _autoRefreshSeconds => AppState.I.refreshIntervalMinutes * 60;
 
   @override
   void initState() {
     super.initState();
     _load();
     _searchCtrl.addListener(() => setState(() {}));
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: _autoRefreshSeconds), (_) {
-      if (!_loading) _load();
-    });
+    _secondsUntilRefresh = _autoRefreshSeconds;
+    // A single 1s ticker both drives the countdown display and triggers
+    // the refresh itself (instead of a separate 60s Timer.periodic), so
+    // changing the interval in Settings takes effect on the very next
+    // tick without needing to tear down/recreate a periodic timer.
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
-        _secondsUntilRefresh = _secondsUntilRefresh > 0 ? _secondsUntilRefresh - 1 : _autoRefreshSeconds;
+        if (_secondsUntilRefresh > 0) {
+          _secondsUntilRefresh--;
+        } else {
+          _secondsUntilRefresh = _autoRefreshSeconds;
+          if (!_loading) _load();
+        }
       });
     });
   }
@@ -1221,7 +1239,6 @@ class _ServerListPageState extends State<ServerListPage> {
   @override
   void dispose() {
     _searchCtrl.dispose();
-    _autoRefreshTimer?.cancel();
     _countdownTimer?.cancel();
     super.dispose();
   }
@@ -1324,6 +1341,13 @@ class _ServerListPageState extends State<ServerListPage> {
     });
   }
 
+  static String _formatCountdown(int seconds) {
+    if (seconds < 60) return '${seconds}s';
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return s == 0 ? '${m}m' : '${m}m ${s}s';
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filtered;
@@ -1375,7 +1399,7 @@ class _ServerListPageState extends State<ServerListPage> {
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: Text(
-                    '${_secondsUntilRefresh}s',
+                    _formatCountdown(_secondsUntilRefresh),
                     style: TextStyle(fontSize: 11, color: kFg.withValues(alpha: 0.3)),
                   ),
                 ),
@@ -2951,6 +2975,40 @@ class _SettingsPageState extends State<SettingsPage> {
                             ],
                           ),
                         ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _sectionLabel(tr('autoRefresh')),
+                  const SizedBox(height: 8),
+                  GlassPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(tr('autoRefreshDesc'), style: TextStyle(fontSize: 12.5, color: kFg.withValues(alpha: 0.5))),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            _stepperButton(Icons.remove, () {
+                              final v = (AppState.I.refreshIntervalMinutes - 5).clamp(5, 30);
+                              AppState.I.setRefreshIntervalMinutes(v);
+                              setState(() {});
+                            }),
+                            Expanded(
+                              child: Center(
+                                child: Text(
+                                  '${AppState.I.refreshIntervalMinutes} min',
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                            _stepperButton(Icons.add, () {
+                              final v = (AppState.I.refreshIntervalMinutes + 5).clamp(5, 30);
+                              AppState.I.setRefreshIntervalMinutes(v);
+                              setState(() {});
+                            }),
+                          ],
+                        ),
                       ],
                     ),
                   ),
