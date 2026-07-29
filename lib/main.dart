@@ -176,6 +176,8 @@ const Map<String, Map<String, String>> _strings = {
   'topRegionSubtitle': {'de': 'Beste Server nach Boost', 'en': 'Best servers by boost', 'fr': 'Meilleurs serveurs par boost', 'es': 'Mejores servidores por impulso', 'pl': 'Najlepsze serwery według boostu', 'it': 'Migliori server per boost', 'pt': 'Melhores servidores por impulso', 'nl': 'Beste servers op boost', 'tr': 'Artırmaya göre en iyi sunucular'},
   'tutorialSearchHistoryDesc': {'de': 'Hier siehst du deine letzten 50 Suchanfragen und kannst sie mit der Mülltonne löschen.', 'en': 'See your last 50 searches here and clear them with the trash icon.', 'fr': "Retrouvez ici vos 50 dernières recherches et effacez-les avec l'icône de corbeille.", 'es': 'Aquí ves tus últimas 50 búsquedas y puedes borrarlas con el icono de papelera.', 'pl': 'Tutaj zobaczysz swoje ostatnie 50 wyszukiwań i możesz je wyczyścić ikoną kosza.', 'it': 'Qui trovi le tue ultime 50 ricerche e puoi eliminarle con l\'icona del cestino.', 'pt': 'Aqui você vê suas últimas 50 pesquisas e pode limpá-las com o ícone de lixeira.', 'nl': 'Hier zie je je laatste 50 zoekopdrachten en kun je ze wissen met het prullenbakicoon.', 'tr': 'Son 50 aramanı burada görebilir ve çöp kutusu simgesiyle temizleyebilirsin.'},
   'tutorialTopRegionDesc': {'de': 'Die 10 beliebtesten Server in deiner Region, sortiert nach Boost.', 'en': 'The 10 most popular servers in your region, sorted by boost.', 'fr': 'Les 10 serveurs les plus populaires de ta région, triés par boost.', 'es': 'Los 10 servidores más populares de tu región, ordenados por impulso.', 'pl': '10 najpopularniejszych serwerów w Twoim regionie, sortowane według boostu.', 'it': 'I 10 server più popolari della tua regione, ordinati per boost.', 'pt': 'Os 10 servidores mais populares da sua região, ordenados por impulso.', 'nl': 'De 10 populairste servers in jouw regio, gesorteerd op boost.', 'tr': 'Bölgendeki en popüler 10 sunucu, artırmaya göre sıralanmış.'},
+  'statsPlayersOnline': {'de': 'Spieler online', 'en': 'Players online', 'fr': 'Joueurs en ligne', 'es': 'Jugadores en línea', 'pl': 'Graczy online', 'it': 'Giocatori online', 'pt': 'Jogadores online', 'nl': 'Spelers online', 'tr': 'Çevrimiçi oyuncu'},
+  'statsServersOnline': {'de': 'Server online', 'en': 'Servers online', 'fr': 'Serveurs en ligne', 'es': 'Servidores en línea', 'pl': 'Serwerów online', 'it': 'Server online', 'pt': 'Servidores online', 'nl': 'Servers online', 'tr': 'Çevrimiçi sunucu'},
   'themeLight': {'de': 'Hell', 'en': 'Light', 'fr': 'Clair', 'es': 'Claro', 'pl': 'Jasny', 'it': 'Chiaro', 'pt': 'Claro', 'nl': 'Licht', 'tr': 'Açık'},
   'themeDark': {'de': 'Dunkel', 'en': 'Dark', 'fr': 'Sombre', 'es': 'Oscuro', 'pl': 'Ciemny', 'it': 'Scuro', 'pt': 'Escuro', 'nl': 'Donker', 'tr': 'Koyu'},
   'themeAuto': {'de': 'Automatisch', 'en': 'Automatic', 'fr': 'Automatique', 'es': 'Automático', 'pl': 'Automatyczny', 'it': 'Automatico', 'pt': 'Automático', 'nl': 'Automatisch', 'tr': 'Otomatik'},
@@ -464,15 +466,41 @@ class SoundService {
 
 class WidgetService {
   static const _providerName = 'FavoritesWidgetProvider';
+  static const _miniProviderName = 'FavoritesMiniWidgetProvider';
+
+  // Widgets can't fetch network images themselves, so the icon is
+  // downloaded here and embedded as Base64 in the same JSON payload; the
+  // native side just decodes bytes -> Bitmap, no networking on that end.
+  static Future<String?> _fetchIconBase64(String url) async {
+    try {
+      final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
+        return base64Encode(res.bodyBytes);
+      }
+    } catch (_) {
+      // Best-effort only - the row just renders without a logo.
+    }
+    return null;
+  }
 
   static Future<void> pushFavorites(List<GameServer> favoriteServers) async {
     try {
-      final entries = favoriteServers.take(4).map((s) => {
-            'name': s.hostname,
-            'players': '${fmtNum(s.clients)}/${fmtNum(s.svMaxclients)}',
-          }).toList();
+      final top = favoriteServers.take(4).toList();
+      final icons = await Future.wait(top.map((s) => _fetchIconBase64(s.iconUrl)));
+      final entries = <Map<String, String>>[];
+      for (var i = 0; i < top.length; i++) {
+        final s = top[i];
+        final entry = <String, String>{
+          'name': s.hostname,
+          'players': '${fmtNum(s.clients)}/${fmtNum(s.svMaxclients)}',
+        };
+        final icon = icons[i];
+        if (icon != null) entry['icon'] = icon;
+        entries.add(entry);
+      }
       await HomeWidget.saveWidgetData<String>('favoritesJson', jsonEncode(entries));
       await HomeWidget.updateWidget(name: _providerName);
+      await HomeWidget.updateWidget(name: _miniProviderName);
     } catch (_) {
       // Best-effort only - a missing widget/host device shouldn't crash anything.
     }
@@ -3160,12 +3188,34 @@ class _MainMenuPageState extends State<MainMenuPage> {
   final _topRegionKey = GlobalKey();
   final _settingsKey = GlobalKey();
   OverlayEntry? _tutorialEntry;
+  int? _totalPlayers;
+  int? _totalServers;
+  bool _statsFailed = false;
 
   @override
   void initState() {
     super.initState();
     if (!AppState.I.tutorialSeen) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial());
+    }
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      final servers = await ApiService.fetchTopServers();
+      if (!mounted) return;
+      var players = 0;
+      for (final s in servers) {
+        players += s.clients;
+      }
+      setState(() {
+        _totalPlayers = players;
+        _totalServers = servers.length;
+      });
+    } catch (_) {
+      // Best-effort only - the bar just stays hidden on failure.
+      if (mounted) setState(() => _statsFailed = true);
     }
   }
 
@@ -3213,6 +3263,32 @@ class _MainMenuPageState extends State<MainMenuPage> {
                     tr('appName'),
                     style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -0.3),
                   ),
+                  if (!_statsFailed) ...[
+                    const SizedBox(height: 16),
+                    GlassPanel(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          _StatBlock(
+                            icon: Icons.people_outline,
+                            value: _totalPlayers,
+                            label: tr('statsPlayersOnline'),
+                          ),
+                          Container(
+                            width: 1,
+                            height: 30,
+                            margin: const EdgeInsets.symmetric(horizontal: 14),
+                            color: kFgAlpha(0.08),
+                          ),
+                          _StatBlock(
+                            icon: Icons.dns_outlined,
+                            value: _totalServers,
+                            label: tr('statsServersOnline'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Expanded(
                     child: SingleChildScrollView(
@@ -3503,6 +3579,84 @@ class _TopRegionServersPageState extends State<TopRegionServersPage> {
         itemCount: _servers.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (context, index) => ServerTile(server: _servers[index]),
+      ),
+    );
+  }
+}
+
+// Subtle repeating fade used as a loading placeholder for the stats bar -
+// less jarring than a spinner for small inline numbers.
+class _SkeletonPulse extends StatefulWidget {
+  final double width;
+  final double height;
+  const _SkeletonPulse({required this.width, required this.height});
+
+  @override
+  State<_SkeletonPulse> createState() => _SkeletonPulseState();
+}
+
+class _SkeletonPulseState extends State<_SkeletonPulse> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.35, end: 0.85).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut)),
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: kFgAlpha(0.12),
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatBlock extends StatelessWidget {
+  final IconData icon;
+  final int? value;
+  final String label;
+  const _StatBlock({required this.icon, required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: kAccent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: value == null
+                      ? const _SkeletonPulse(key: ValueKey('skeleton'), width: 42, height: 14)
+                      : Text(
+                          fmtNum(value!),
+                          key: const ValueKey('value'),
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                ),
+                const SizedBox(height: 1),
+                Text(label, style: TextStyle(fontSize: 10.5, color: kFgAlpha(0.5))),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

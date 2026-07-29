@@ -46,16 +46,22 @@ jobs:
           WIDGET_PKG_DIR=android/app/src/main/kotlin/de/gio/fivembrowser/fivem_browser
           mkdir -p "$WIDGET_PKG_DIR"
           cp android_widget/FavoritesWidgetProvider.kt "$WIDGET_PKG_DIR/FavoritesWidgetProvider.kt"
+          cp android_widget/FavoritesMiniWidgetProvider.kt "$WIDGET_PKG_DIR/FavoritesMiniWidgetProvider.kt"
+          cp android_widget/WidgetUtils.kt "$WIDGET_PKG_DIR/WidgetUtils.kt"
           mkdir -p android/app/src/main/res/xml
           cp android_widget/favorites_widget_info.xml android/app/src/main/res/xml/favorites_widget_info.xml
+          cp android_widget/favorites_mini_widget_info.xml android/app/src/main/res/xml/favorites_mini_widget_info.xml
           mkdir -p android/app/src/main/res/layout
           cp android_widget/favorites_widget_layout.xml android/app/src/main/res/layout/favorites_widget_layout.xml
+          cp android_widget/favorites_mini_widget_layout.xml android/app/src/main/res/layout/favorites_mini_widget_layout.xml
+          mkdir -p android/app/src/main/res/drawable
+          cp android_widget/widget_row_bg.xml android/app/src/main/res/drawable/widget_row_bg.xml
 
-      - name: Register home screen widget receiver in manifest
+      - name: Register home screen widget receivers in manifest
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
-          perl -0pi -e 's#(\s*)(</application>)#$1    <receiver android:name="de.gio.fivembrowser.fivem_browser.FavoritesWidgetProvider" android:exported="true" android:label="Fserver Favoriten">$1        <intent-filter>$1            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />$1        </intent-filter>$1        <meta-data android:name="android.appwidget.provider" android:resource="\@xml/favorites_widget_info" />$1    </receiver>$1$2#' "$MANIFEST"
-          grep -n "FavoritesWidgetProvider" "$MANIFEST"
+          perl -0pi -e 's#(\s*)(</application>)#$1    <receiver android:name="de.gio.fivembrowser.fivem_browser.FavoritesWidgetProvider" android:exported="true" android:label="Fserver Favoriten">$1        <intent-filter>$1            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />$1        </intent-filter>$1        <meta-data android:name="android.appwidget.provider" android:resource="\@xml/favorites_widget_info" />$1    </receiver>$1    <receiver android:name="de.gio.fivembrowser.fivem_browser.FavoritesMiniWidgetProvider" android:exported="true" android:label="Fserver Favoriten Mini">$1        <intent-filter>$1            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />$1        </intent-filter>$1        <meta-data android:name="android.appwidget.provider" android:resource="\@xml/favorites_mini_widget_info" />$1    </receiver>$1$2#' "$MANIFEST"
+          grep -n "FavoritesWidgetProvider\|FavoritesMiniWidgetProvider" "$MANIFEST"
 
       - name: Ensure required permissions are declared
         run: |

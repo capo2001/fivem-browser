@@ -42,13 +42,22 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingTop="3dp"
-        android:paddingBottom="3dp">
+        android:gravity="center_vertical"
+        android:background="@drawable/widget_row_bg"
+        android:padding="6dp"
+        android:layout_marginBottom="4dp">
+        <ImageView
+            android:id="@+id/widget_row1_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:scaleType="centerCrop"
+            android:src="@mipmap/ic_launcher" />
         <TextView
             android:id="@+id/widget_row1_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="8dp"
             android:singleLine="true"
             android:ellipsize="end"
             android:textColor="#FFFFFFFF"
@@ -68,13 +77,22 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingTop="3dp"
-        android:paddingBottom="3dp">
+        android:gravity="center_vertical"
+        android:background="@drawable/widget_row_bg"
+        android:padding="6dp"
+        android:layout_marginBottom="4dp">
+        <ImageView
+            android:id="@+id/widget_row2_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:scaleType="centerCrop"
+            android:src="@mipmap/ic_launcher" />
         <TextView
             android:id="@+id/widget_row2_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="8dp"
             android:singleLine="true"
             android:ellipsize="end"
             android:textColor="#FFFFFFFF"
@@ -94,13 +112,22 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingTop="3dp"
-        android:paddingBottom="3dp">
+        android:gravity="center_vertical"
+        android:background="@drawable/widget_row_bg"
+        android:padding="6dp"
+        android:layout_marginBottom="4dp">
+        <ImageView
+            android:id="@+id/widget_row3_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:scaleType="centerCrop"
+            android:src="@mipmap/ic_launcher" />
         <TextView
             android:id="@+id/widget_row3_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="8dp"
             android:singleLine="true"
             android:ellipsize="end"
             android:textColor="#FFFFFFFF"
@@ -120,13 +147,22 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:paddingTop="3dp"
-        android:paddingBottom="3dp">
+        android:gravity="center_vertical"
+        android:background="@drawable/widget_row_bg"
+        android:padding="6dp"
+        android:layout_marginBottom="0dp">
+        <ImageView
+            android:id="@+id/widget_row4_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:scaleType="centerCrop"
+            android:src="@mipmap/ic_launcher" />
         <TextView
             android:id="@+id/widget_row4_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="8dp"
             android:singleLine="true"
             android:ellipsize="end"
             android:textColor="#FFFFFFFF"
