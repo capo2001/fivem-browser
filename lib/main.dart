@@ -3589,7 +3589,7 @@ class _TopRegionServersPageState extends State<TopRegionServersPage> {
 class _SkeletonPulse extends StatefulWidget {
   final double width;
   final double height;
-  const _SkeletonPulse({required this.width, required this.height});
+  const _SkeletonPulse({super.key, required this.width, required this.height});
 
   @override
   State<_SkeletonPulse> createState() => _SkeletonPulseState();
