@@ -1,7 +1,7 @@
 name: fivem_browser
 description: Server browser for the cfx.re / FiveM server list.
 publish_to: "none"
-version: 1.6.0+7
+version: 1.7.0+8
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -28,7 +28,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon/app_icon.png
-    - assets/sounds/splash.wav
     - assets/sounds/tap.wav
     - assets/sounds/notif_chime.wav
     - assets/sounds/notif_bell.wav

@@ -22,7 +22,13 @@ const Color _kDarkSurface = Color(0xFF10141C);
 const Color _kLightBg = Color(0xFFF3F4F6);
 const Color _kLightSurface = Color(0xFFFFFFFF);
 const Color _kLightFg = Color(0xFF14171C);
-const double kRadius = 5;
+// Bumped from a near-square 5 to a much rounder Material-3-style radius -
+// this single token cascades to virtually every card/panel/tile in the app.
+const double kRadius = 20;
+// Small-scale radius for compact controls (icon badges, stepper buttons).
+const double kRadiusSmall = 12;
+// Fully-rounded "pill" shape for chips/tags/buttons.
+const double kRadiusPill = 999;
 const String kAppVersion = '1.1.0';
 
 // Single fixed brand accent - no more per-theme accent colors, only
@@ -151,7 +157,7 @@ const Map<String, Map<String, String>> _strings = {
   'autoRefresh': {'de': 'Auto-Aktualisierung', 'en': 'Auto-refresh', 'fr': 'Actualisation automatique', 'es': 'Actualización automática', 'pl': 'Automatyczne odświeżanie', 'it': 'Aggiornamento automatico', 'pt': 'Atualização automática', 'nl': 'Automatisch vernieuwen', 'tr': 'Otomatik yenileme'},
   'autoRefreshDesc': {'de': 'Wie oft sich die Serverliste im Hintergrund selbst aktualisiert', 'en': 'How often the server list refreshes itself automatically', 'fr': 'À quelle fréquence la liste des serveurs se rafraîchit automatiquement', 'es': 'Con qué frecuencia se actualiza automáticamente la lista de servidores', 'pl': 'Jak często lista serwerów odświeża się automatycznie', 'it': 'Ogni quanto la lista dei server si aggiorna automaticamente', 'pt': 'Com que frequência a lista de servidores se atualiza automaticamente', 'nl': 'Hoe vaak de serverlijst zichzelf automatisch vernieuwt', 'tr': 'Sunucu listesinin kendini otomatik olarak ne sıklıkla yenileyeceği'},
   'uiSounds': {'de': 'Sound', 'en': 'Sound', 'fr': 'Son', 'es': 'Sonido', 'pl': 'Dźwięk', 'it': 'Suono', 'pt': 'Som', 'nl': 'Geluid', 'tr': 'Ses'},
-  'uiSoundsDesc': {'de': 'Sound-Effekte bei Berührungen und beim App-Start abspielen', 'en': 'Play sound effects on taps and at app startup', 'fr': 'Jouer des effets sonores lors des interactions et au démarrage', 'es': 'Reproducir efectos de sonido al tocar y al iniciar la app', 'pl': 'Odtwarzaj dźwięki przy dotknięciach i przy starcie aplikacji', 'it': "Riproduci effetti sonori ai tocchi e all'avvio dell'app", 'pt': 'Reproduzir efeitos sonoros ao tocar e ao iniciar o aplicativo', 'nl': 'Speel geluidseffecten af bij tikken en bij het opstarten van de app', 'tr': 'Dokunuşlarda ve uygulama açılışında ses efektleri çal'},
+  'uiSoundsDesc': {'de': 'Sound-Effekte bei Berührungen abspielen', 'en': 'Play sound effects on taps', 'fr': 'Jouer des effets sonores lors des interactions', 'es': 'Reproducir efectos de sonido al tocar', 'pl': 'Odtwarzaj dźwięki przy dotknięciach', 'it': 'Riproduci effetti sonori ai tocchi', 'pt': 'Reproduzir efeitos sonoros ao tocar', 'nl': 'Speel geluidseffecten af bij tikken', 'tr': 'Dokunuşlarda ses efektleri çal'},
   'haptics': {'de': 'Vibration bei Berührung', 'en': 'Haptic feedback', 'fr': 'Retour haptique', 'es': 'Retroalimentación háptica', 'pl': 'Wibracje dotykowe', 'it': 'Feedback tattile', 'pt': 'Feedback tátil', 'nl': 'Haptische feedback', 'tr': 'Dokunsal geri bildirim'},
   'hapticsDesc': {'de': 'Kurz vibrieren bei Berührungen in der App', 'en': 'Brief vibration on taps within the app', 'fr': 'Légère vibration lors des interactions dans l\'app', 'es': 'Vibración breve al tocar dentro de la app', 'pl': 'Krótka wibracja przy dotknięciach w aplikacji', 'it': "Breve vibrazione ai tocchi nell'app", 'pt': 'Vibração breve ao tocar dentro do aplicativo', 'nl': 'Korte trilling bij tikken in de app', 'tr': 'Uygulama içindeki dokunuşlarda kısa titreşim'},
   'textSize': {'de': 'Schriftgröße', 'en': 'Text size', 'fr': 'Taille du texte', 'es': 'Tamaño del texto', 'pl': 'Rozmiar tekstu', 'it': 'Dimensione testo', 'pt': 'Tamanho do texto', 'nl': 'Tekstgrootte', 'tr': 'Yazı boyutu'},
@@ -424,16 +430,6 @@ class AppState extends ChangeNotifier {
 
 class SoundService {
   static final AudioPlayer _tapPlayer = AudioPlayer();
-  static final AudioPlayer _splashPlayer = AudioPlayer();
-
-  static Future<void> playSplash() async {
-    if (!AppState.I.uiSoundsEnabled) return;
-    try {
-      await _splashPlayer.play(AssetSource('sounds/splash.wav'), volume: 0.8);
-    } catch (_) {
-      // Best-effort only - a missing/failed sound should never break the UI.
-    }
-  }
 
   static Future<void> tap() async {
     if (!AppState.I.uiSoundsEnabled) return;
@@ -926,7 +922,6 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    SoundService.playSplash();
     _controller.forward();
     Future.delayed(const Duration(milliseconds: 1150), () {
       if (!mounted) return;
@@ -1648,42 +1643,26 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    // Solid, elevated Material-style card - no frosted-glass blur, no
+    // gradient tint. `opacity` now controls how far the fill is nudged
+    // away from the flat surface color (used for subtle emphasis/active
+    // states); `blur` is kept only so existing call sites stay valid.
+    final fill = Color.alphaBlend(kFgAlpha(opacity), kSurface);
+    return Container(
+      padding: padding,
       decoration: BoxDecoration(
         borderRadius: borderRadius,
+        color: fill,
+        border: borderOpacity > 0 ? Border.all(color: kFgAlpha(borderOpacity), width: 1.2) : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: AppState.I.isDark ? 0.28 : 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: AppState.I.isDark ? 0.32 : 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              borderRadius: borderRadius,
-              border: Border.all(
-                color: kFgAlpha(borderOpacity),
-                width: 1,
-              ),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  kFgAlpha(opacity + 0.03),
-                  kFgAlpha(opacity * 0.3),
-                ],
-              ),
-            ),
-            child: child,
-          ),
-        ),
-      ),
+      child: child,
     );
   }
 }
@@ -1709,28 +1688,30 @@ class Pill extends StatelessWidget {
     final color = tintColor ?? kAccent;
     return SoundInkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(kRadius),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      borderRadius: BorderRadius.circular(kRadiusPill),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(kRadius),
-          color: active ? color.withValues(alpha: 0.18) : kFgAlpha(0.05),
-          border: Border.all(
-            color: active ? color.withValues(alpha: 0.65) : kFgAlpha(0.12),
-            width: 1,
-          ),
+          borderRadius: BorderRadius.circular(kRadiusPill),
+          color: active ? color : kFgAlpha(0.06),
+          border: active ? null : Border.all(color: kFgAlpha(0.14), width: 1.2),
+          boxShadow: active
+              ? [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 3))]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (leading != null) ...[leading!, const SizedBox(width: 5)],
+            if (leading != null) ...[leading!, const SizedBox(width: 6)],
             Text(
               text,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 11.5,
                 height: 1,
-                color: active ? kFg : kFgAlpha(0.75),
-                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                color: active ? Colors.white : kFgAlpha(0.8),
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
               ),
             ),
           ],
@@ -3414,13 +3395,32 @@ class _MainMenuPageState extends State<MainMenuPage> {
           backgroundColor: kBg,
           body: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    tr('appName'),
-                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          tr('appName'),
+                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                        ),
+                      ),
+                      KeyedSubtree(
+                        key: _settingsKey,
+                        child: SoundInkWell(
+                          borderRadius: BorderRadius.circular(kRadius),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const SettingsPage()),
+                          ),
+                          child: GlassPanel(
+                            padding: const EdgeInsets.all(12),
+                            child: Icon(Icons.settings_rounded, size: 22, color: kFgAlpha(0.85)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   if (!_statsFailed) ...[
                     const SizedBox(height: 16),
@@ -3429,7 +3429,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
                       child: Row(
                         children: [
                           _StatBlock(
-                            icon: Icons.people_outline,
+                            icon: Icons.groups_rounded,
                             value: _totalPlayers,
                             label: tr('statsPlayersOnline'),
                           ),
@@ -3440,7 +3440,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
                             color: kFgAlpha(0.08),
                           ),
                           _StatBlock(
-                            icon: Icons.dns_outlined,
+                            icon: Icons.dns_rounded,
                             value: _totalServers,
                             label: tr('statsServersOnline'),
                           ),
@@ -3448,79 +3448,60 @@ class _MainMenuPageState extends State<MainMenuPage> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          KeyedSubtree(
-                            key: _serverListKey,
-                            child: _MenuCard(
-                              icon: Icons.dns,
-                              title: tr('serverList'),
-                              subtitle: tr('serverListSubtitle'),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ServerListPage()),
-                              ),
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 14,
+                      crossAxisSpacing: 14,
+                      childAspectRatio: 1.0,
+                      children: [
+                        KeyedSubtree(
+                          key: _serverListKey,
+                          child: _MenuTile(
+                            icon: Icons.dns_rounded,
+                            title: tr('serverList'),
+                            subtitle: tr('serverListSubtitle'),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const ServerListPage()),
                             ),
                           ),
-                          const SizedBox(height: 14),
-                          KeyedSubtree(
-                            key: _favoritesKey,
-                            child: _MenuCard(
-                              icon: Icons.star,
-                              title: tr('favorites'),
-                              subtitle: tr('favoritesSubtitle'),
-                              badge: AppState.I.favorites.isEmpty ? null : '${AppState.I.favorites.length}',
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const FavoritesPage()),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          KeyedSubtree(
-                            key: _historyKey,
-                            child: _MenuCard(
-                              icon: Icons.history,
-                              title: tr('searchHistoryTitle'),
-                              subtitle: tr('searchHistorySubtitle'),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const SearchHistoryPage()),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          KeyedSubtree(
-                            key: _topRegionKey,
-                            child: _MenuCard(
-                              icon: Icons.public,
-                              title: tr('topRegionTitle'),
-                              subtitle: tr('topRegionSubtitle'),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const TopRegionServersPage()),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: KeyedSubtree(
-                      key: _settingsKey,
-                      child: SoundInkWell(
-                        borderRadius: BorderRadius.circular(kRadius),
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const SettingsPage()),
                         ),
-                        child: GlassPanel(
-                          padding: const EdgeInsets.all(12),
-                          child: Icon(Icons.settings_outlined, size: 22, color: kFgAlpha(0.85)),
+                        KeyedSubtree(
+                          key: _favoritesKey,
+                          child: _MenuTile(
+                            icon: Icons.star_rounded,
+                            title: tr('favorites'),
+                            subtitle: tr('favoritesSubtitle'),
+                            badge: AppState.I.favorites.isEmpty ? null : '${AppState.I.favorites.length}',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const FavoritesPage()),
+                            ),
+                          ),
                         ),
-                      ),
+                        KeyedSubtree(
+                          key: _historyKey,
+                          child: _MenuTile(
+                            icon: Icons.history_rounded,
+                            title: tr('searchHistoryTitle'),
+                            subtitle: tr('searchHistorySubtitle'),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const SearchHistoryPage()),
+                            ),
+                          ),
+                        ),
+                        KeyedSubtree(
+                          key: _topRegionKey,
+                          child: _MenuTile(
+                            icon: Icons.emoji_events_rounded,
+                            title: tr('topRegionTitle'),
+                            subtitle: tr('topRegionSubtitle'),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const TopRegionServersPage()),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -3821,14 +3802,17 @@ class _StatBlock extends StatelessWidget {
   }
 }
 
-class _MenuCard extends StatelessWidget {
+// Square-ish grid tile for the main menu - icon in a gradient badge up
+// top, title/subtitle below, optional count badge in the corner. Replaces
+// the old horizontal list-row card with a genuinely different arrangement.
+class _MenuTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final String? badge;
   final VoidCallback onTap;
 
-  const _MenuCard({
+  const _MenuTile({
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -3842,43 +3826,69 @@ class _MenuCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(kRadius),
       onTap: onTap,
       child: GlassPanel(
-        blur: 24,
-        padding: const EdgeInsets.all(18),
-        child: Row(
+        padding: const EdgeInsets.all(16),
+        child: Stack(
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(kRadius),
-                color: kAccent.withValues(alpha: 0.12),
-                border: Border.all(color: kAccent.withValues(alpha: 0.3)),
-              ),
-              child: Icon(icon, size: 26, color: kAccent),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 3),
-                  Text(subtitle, style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.5))),
-                ],
-              ),
-            ),
-            if (badge != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(kRadius),
-                  color: kAccent.withValues(alpha: 0.14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(kRadiusSmall),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [kAccent, kAccent.withValues(alpha: 0.65)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(color: kAccent.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: Icon(icon, size: 24, color: Colors.white),
                 ),
-                child: Text(badge!, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: kAccent)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11.5, color: kFgAlpha(0.5)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (badge != null)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: kAccent,
+                    borderRadius: BorderRadius.circular(kRadiusPill),
+                    boxShadow: [
+                      BoxShadow(color: kAccent.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 2)),
+                    ],
+                  ),
+                  child: Text(
+                    badge!,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
+                  ),
+                ),
               ),
-              const SizedBox(width: 8),
-            ],
-            Icon(Icons.chevron_right, color: kFgAlpha(0.35)),
           ],
         ),
       ),
