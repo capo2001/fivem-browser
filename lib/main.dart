@@ -17,6 +17,7 @@ import 'package:quick_actions/quick_actions.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:app_settings/app_settings.dart';
 
 const Color _kDarkBg = Color(0xFF070A0F);
 const Color _kDarkSurface = Color(0xFF10141C);
@@ -141,6 +142,8 @@ const Map<String, Map<String, String>> _strings = {
   'favoriteNotifyThresholdLabel': {'de': 'Ab so vielen Spielern', 'en': 'From this many players', 'fr': 'À partir de ce nombre de joueurs', 'es': 'A partir de esta cantidad de jugadores', 'pl': 'Od tylu graczy', 'it': 'A partire da questo numero di giocatori', 'pt': 'A partir desta quantidade de jogadores', 'nl': 'Vanaf dit aantal spelers', 'tr': 'Bu kadar oyuncudan itibaren'},
   'clearCache': {'de': 'App-Cache leeren', 'en': 'Clear app cache', 'fr': "Vider le cache de l'app", 'es': 'Borrar caché de la app', 'pl': 'Wyczyść pamięć podręczną aplikacji', 'it': "Svuota la cache dell'app", 'pt': 'Limpar cache do aplicativo', 'nl': 'App-cache wissen', 'tr': 'Uygulama önbelleğini temizle'},
   'cacheCleared': {'de': 'Cache geleert', 'en': 'Cache cleared', 'fr': 'Cache vidé', 'es': 'Caché borrada', 'pl': 'Pamięć podręczna wyczyszczona', 'it': 'Cache svuotata', 'pt': 'Cache limpo', 'nl': 'Cache gewist', 'tr': 'Önbellek temizlendi'},
+  'notifPermissionWarning': {'de': 'Du musst Benachrichtigungen erlauben, um über deine Server benachrichtigt zu werden.', 'en': 'You need to allow notifications to be notified about your servers.', 'fr': 'Vous devez autoriser les notifications pour être informé au sujet de vos serveurs.', 'es': 'Debes permitir las notificaciones para recibir avisos sobre tus servidores.', 'pl': 'Musisz zezwolić na powiadomienia, aby otrzymywać informacje o swoich serwerach.', 'it': 'Devi consentire le notifiche per essere avvisato sui tuoi server.', 'pt': 'Você precisa permitir notificações para ser avisado sobre seus servidores.', 'nl': 'Je moet meldingen toestaan om op de hoogte te blijven van je servers.', 'tr': 'Sunucularınla ilgili bildirim alabilmek için bildirimlere izin vermelisin.'},
+  'notifPermissionGrant': {'de': 'Freigeben', 'en': 'Allow', 'fr': 'Autoriser', 'es': 'Permitir', 'pl': 'Zezwól', 'it': 'Consenti', 'pt': 'Permitir', 'nl': 'Toestaan', 'tr': 'İzin ver'},
   'useDefaultThreshold': {'de': 'Standard verwenden', 'en': 'Use default', 'fr': 'Utiliser la valeur par défaut', 'es': 'Usar valor predeterminado', 'pl': 'Użyj domyślnej', 'it': 'Usa predefinito', 'pt': 'Usar padrão', 'nl': 'Standaard gebruiken', 'tr': 'Varsayılanı kullan'},
   'notificationSound': {'de': 'Benachrichtigungston', 'en': 'Notification sound', 'fr': 'Son de notification', 'es': 'Sonido de notificación', 'pl': 'Dźwięk powiadomienia', 'it': 'Suono di notifica', 'pt': 'Som de notificação', 'nl': 'Meldingsgeluid', 'tr': 'Bildirim sesi'},
   'soundDefault': {'de': 'Standard', 'en': 'Default', 'fr': 'Par défaut', 'es': 'Predeterminado', 'pl': 'Domyślny', 'it': 'Predefinito', 'pt': 'Padrão', 'nl': 'Standaard', 'tr': 'Varsayılan'},
@@ -775,6 +778,36 @@ Future<void> _initNotifications() async {
   await plugin
       .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
       ?.requestNotificationsPermission();
+}
+
+// ---------------------------------------------------------------------------
+// Notification permission status (Android) - checked live against the OS
+// rather than cached, since the user can flip it at any time from the
+// system settings outside the app (e.g. after tapping "deny" once, then
+// later granting it manually).
+// ---------------------------------------------------------------------------
+
+class NotificationPermissionService {
+  static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+
+  static Future<bool> isEnabled() async {
+    try {
+      final enabled = await _plugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.areNotificationsEnabled();
+      return enabled ?? true;
+    } catch (_) {
+      return true; // Fail open - don't nag if the check itself fails.
+    }
+  }
+
+  static Future<void> openSettings() async {
+    try {
+      await AppSettings.openAppSettings(type: AppSettingsType.notification);
+    } catch (_) {
+      // Best-effort only.
+    }
+  }
 }
 
 void main() {
@@ -3517,7 +3550,7 @@ class MainMenuPage extends StatefulWidget {
   State<MainMenuPage> createState() => _MainMenuPageState();
 }
 
-class _MainMenuPageState extends State<MainMenuPage> {
+class _MainMenuPageState extends State<MainMenuPage> with WidgetsBindingObserver {
   final _serverListKey = GlobalKey();
   final _favoritesKey = GlobalKey();
   final _historyKey = GlobalKey();
@@ -3527,14 +3560,29 @@ class _MainMenuPageState extends State<MainMenuPage> {
   int? _totalPlayers;
   int? _totalServers;
   bool _statsFailed = false;
+  bool _notificationsEnabled = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     if (!AppState.I.tutorialSeen) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial());
     }
     _loadStats();
+    _checkNotificationPermission();
+  }
+
+  Future<void> _checkNotificationPermission() async {
+    final enabled = await NotificationPermissionService.isEnabled();
+    if (mounted) setState(() => _notificationsEnabled = enabled);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Catches the user coming back from the system notification settings
+    // screen (opened from the Settings page) so the badge clears right away.
+    if (state == AppLifecycleState.resumed) _checkNotificationPermission();
   }
 
   Future<void> _loadStats() async {
@@ -3578,6 +3626,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tutorialEntry?.remove();
     super.dispose();
   }
@@ -3607,12 +3656,35 @@ class _MainMenuPageState extends State<MainMenuPage> {
                         key: _settingsKey,
                         child: SoundInkWell(
                           borderRadius: BorderRadius.circular(kRadius),
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const SettingsPage()),
-                          ),
-                          child: GlassPanel(
-                            padding: const EdgeInsets.all(12),
-                            child: Icon(Icons.settings_rounded, size: 22, color: kFgAlpha(0.85)),
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const SettingsPage()),
+                            );
+                            _checkNotificationPermission();
+                          },
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              GlassPanel(
+                                padding: const EdgeInsets.all(12),
+                                child: Icon(Icons.settings_rounded, size: 22, color: kFgAlpha(0.85)),
+                              ),
+                              if (!_notificationsEnabled)
+                                Positioned(
+                                  top: -3,
+                                  right: -3,
+                                  child: Container(
+                                    width: 16,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: kBg, width: 2),
+                                    ),
+                                    child: const Icon(Icons.priority_high, size: 10, color: Colors.white),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),
@@ -4395,7 +4467,79 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends State<SettingsPage> with WidgetsBindingObserver {
+  bool _notificationsEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkNotificationPermission();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _checkNotificationPermission() async {
+    final enabled = await NotificationPermissionService.isEnabled();
+    if (mounted) setState(() => _notificationsEnabled = enabled);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Catches the user coming back from the system notification settings
+    // screen so the banner disappears the moment they return, without
+    // needing to leave and reopen this page.
+    if (state == AppLifecycleState.resumed) _checkNotificationPermission();
+  }
+
+  Widget _notificationPermissionBanner() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GlassPanel(
+        padding: const EdgeInsets.all(14),
+        borderRadius: BorderRadius.circular(kRadius),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.error_rounded, color: Colors.redAccent, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr('notifPermissionWarning'),
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, height: 1.35),
+                  ),
+                  const SizedBox(height: 10),
+                  SoundInkWell(
+                    borderRadius: BorderRadius.circular(kRadiusPill),
+                    onTap: () => NotificationPermissionService.openSettings(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent,
+                        borderRadius: BorderRadius.circular(kRadiusPill),
+                      ),
+                      child: Text(
+                        tr('notifPermissionGrant'),
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -4428,6 +4572,7 @@ class _SettingsPageState extends State<SettingsPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
+                  if (!_notificationsEnabled) _notificationPermissionBanner(),
                   _sectionLabel(tr('appLanguage')),
                   const SizedBox(height: 8),
                   GlassPanel(
