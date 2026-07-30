@@ -63,6 +63,14 @@ jobs:
           perl -0pi -e 's#(\s*)(</application>)#$1    <receiver android:name="de.gio.fivembrowser.fivem_browser.FavoritesWidgetProvider" android:exported="true" android:label="Fserver Favoriten">$1        <intent-filter>$1            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />$1        </intent-filter>$1        <meta-data android:name="android.appwidget.provider" android:resource="\@xml/favorites_widget_info" />$1    </receiver>$1    <receiver android:name="de.gio.fivembrowser.fivem_browser.FavoritesMiniWidgetProvider" android:exported="true" android:label="Fserver Favoriten Mini">$1        <intent-filter>$1            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />$1        </intent-filter>$1        <meta-data android:name="android.appwidget.provider" android:resource="\@xml/favorites_mini_widget_info" />$1    </receiver>$1$2#' "$MANIFEST"
           grep -n "FavoritesWidgetProvider\|FavoritesMiniWidgetProvider" "$MANIFEST"
 
+      - name: Register AdMob App ID in manifest
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          # Google's official TEST App ID - replace with the real AdMob App ID
+          # before release, or only test ads will ever be served.
+          perl -0pi -e 's#(\s*)(</application>)#$1    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>$1$2#' "$MANIFEST"
+          grep -n "APPLICATION_ID" "$MANIFEST"
+
       - name: Ensure required permissions are declared
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
