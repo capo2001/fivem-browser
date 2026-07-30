@@ -15,6 +15,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'package:home_widget/home_widget.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 const Color _kDarkBg = Color(0xFF070A0F);
 const Color _kDarkSurface = Color(0xFF10141C);
@@ -513,7 +514,7 @@ class WidgetService {
 // taps make a sound app-wide; it forwards the same handful of named
 // parameters actually used across the codebase (onTap, onLongPress,
 // borderRadius, child).
-class SoundInkWell extends StatelessWidget {
+class SoundInkWell extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
   final BorderRadius? borderRadius;
@@ -533,22 +534,36 @@ class SoundInkWell extends StatelessWidget {
   }
 
   @override
+  State<SoundInkWell> createState() => _SoundInkWellState();
+}
+
+class _SoundInkWellState extends State<SoundInkWell> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap == null
-          ? null
-          : () {
-              _feedback();
-              onTap!();
-            },
-      onLongPress: onLongPress == null
-          ? null
-          : () {
-              _feedback();
-              onLongPress!();
-            },
-      borderRadius: borderRadius,
-      child: child,
+    final interactive = widget.onTap != null || widget.onLongPress != null;
+    return AnimatedScale(
+      scale: _pressed ? 0.96 : 1.0,
+      duration: const Duration(milliseconds: 110),
+      curve: Curves.easeOut,
+      child: InkWell(
+        onTap: widget.onTap == null
+            ? null
+            : () {
+                SoundInkWell._feedback();
+                widget.onTap!();
+              },
+        onLongPress: widget.onLongPress == null
+            ? null
+            : () {
+                SoundInkWell._feedback();
+                widget.onLongPress!();
+              },
+        onHighlightChanged: interactive ? (value) => setState(() => _pressed = value) : null,
+        borderRadius: widget.borderRadius,
+        child: widget.child,
+      ),
     );
   }
 }
@@ -722,6 +737,35 @@ void main() {
   });
 }
 
+// Subtle fade + upward-slide transition used for every push/pop app-wide,
+// set once via ThemeData.pageTransitionsTheme instead of touching every
+// individual Navigator.push call site.
+class _SmoothPageTransitionsBuilder extends PageTransitionsBuilder {
+  const _SmoothPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final incoming = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+    final outgoing = CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeOutCubic);
+    return FadeTransition(
+      opacity: incoming,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.035), end: Offset.zero).animate(incoming),
+        child: FadeTransition(
+          opacity: Tween<double>(begin: 1.0, end: 0.85).animate(outgoing),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 class FivemBrowserApp extends StatefulWidget {
@@ -816,13 +860,39 @@ class _FivemBrowserAppState extends State<FivemBrowserApp> with WidgetsBindingOb
             ),
             splashFactory: NoSplash.splashFactory,
             highlightColor: Colors.transparent,
-            textTheme: base.textTheme.apply(
+            textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
               bodyColor: kFgAlpha(0.92),
               displayColor: kFg,
               fontSizeFactor: 0.93,
             ),
             dividerColor: kFgAlpha(0.08),
             useMaterial3: true,
+            pageTransitionsTheme: const PageTransitionsTheme(
+              builders: {
+                TargetPlatform.android: _SmoothPageTransitionsBuilder(),
+                TargetPlatform.iOS: _SmoothPageTransitionsBuilder(),
+              },
+            ),
+            switchTheme: SwitchThemeData(
+              thumbColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) return kAccent;
+                return isDark ? Colors.white : kFgAlpha(0.9);
+              }),
+              trackColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) return kAccent.withValues(alpha: 0.35);
+                return kFgAlpha(0.12);
+              }),
+              trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+            ),
+            sliderTheme: SliderThemeData(
+              activeTrackColor: kAccent,
+              inactiveTrackColor: kFgAlpha(0.14),
+              thumbColor: kAccent,
+              overlayColor: kAccent.withValues(alpha: 0.15),
+              trackHeight: 3,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7.5),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+            ),
           ),
           builder: (context, child) {
             return MediaQuery(
@@ -844,12 +914,21 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 750),
+  );
+  late final Animation<double> _scale = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
+  late final Animation<double> _logoFade = CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.55, curve: Curves.easeOut));
+  late final Animation<double> _textFade = CurvedAnimation(parent: _controller, curve: const Interval(0.45, 1.0, curve: Curves.easeOut));
+
   @override
   void initState() {
     super.initState();
     SoundService.playSplash();
-    Future.delayed(const Duration(milliseconds: 800), () {
+    _controller.forward();
+    Future.delayed(const Duration(milliseconds: 1150), () {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -860,11 +939,67 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBg,
       body: Center(
-        child: Icon(Icons.dns, size: 64, color: kAccent),
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                FadeTransition(
+                  opacity: _logoFade,
+                  child: Container(
+                    width: 170,
+                    height: 170,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [kAccent.withValues(alpha: 0.20), kAccent.withValues(alpha: 0.0)],
+                      ),
+                    ),
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FadeTransition(
+                      opacity: _logoFade,
+                      child: ScaleTransition(
+                        scale: _scale,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: Image.asset(
+                            'assets/icon/app_icon.png',
+                            width: 88,
+                            height: 88,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    FadeTransition(
+                      opacity: _textFade,
+                      child: Text(
+                        tr('appName'),
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: kFg, letterSpacing: -0.2),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -1513,28 +1648,40 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            borderRadius: borderRadius,
-            border: Border.all(
-              color: kFgAlpha(borderOpacity),
-              width: 1,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                kFgAlpha(opacity + 0.03),
-                kFgAlpha(opacity * 0.3),
-              ],
-            ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: AppState.I.isDark ? 0.28 : 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
           ),
-          child: child,
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: Container(
+            padding: padding,
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              border: Border.all(
+                color: kFgAlpha(borderOpacity),
+                width: 1,
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  kFgAlpha(opacity + 0.03),
+                  kFgAlpha(opacity * 0.3),
+                ],
+              ),
+            ),
+            child: child,
+          ),
         ),
       ),
     );
@@ -1701,6 +1848,7 @@ class _ServerListPageState extends State<ServerListPage> {
 
   bool _filtersOpen = false;
   final TextEditingController _searchCtrl = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
   bool _hideEmpty = false;
   bool _hideFull = false;
   String? _selectedCountry;
@@ -1724,6 +1872,7 @@ class _ServerListPageState extends State<ServerListPage> {
     _load();
     if (widget.initialSearch != null) _searchCtrl.text = widget.initialSearch!;
     _searchCtrl.addListener(() => setState(() {}));
+    _searchFocus.addListener(() => setState(() {}));
     _secondsUntilRefresh = _autoRefreshSeconds;
     // A single 1s ticker both drives the countdown display and triggers
     // the refresh itself (instead of a separate 60s Timer.periodic), so
@@ -1745,6 +1894,7 @@ class _ServerListPageState extends State<ServerListPage> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _searchFocus.dispose();
     _countdownTimer?.cancel();
     super.dispose();
   }
@@ -1926,32 +2076,41 @@ class _ServerListPageState extends State<ServerListPage> {
             ],
           ),
           const SizedBox(height: 10),
-          GlassPanel(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              children: [
-                Icon(Icons.search, size: 18, color: kFgAlpha(0.5)),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: TextField(
-                    controller: _searchCtrl,
-                    style: const TextStyle(fontSize: 14),
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (v) => AppState.I.addSearchTerm(v),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      border: InputBorder.none,
-                      hintText: tr('search'),
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: _searchFocus.hasFocus ? 1.0 : 0.0),
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            builder: (context, t, _) {
+              return GlassPanel(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                borderOpacity: 0.10 + 0.35 * t,
+                child: Row(
+                  children: [
+                    Icon(Icons.search, size: 18, color: Color.lerp(kFgAlpha(0.5), kAccent, t)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchCtrl,
+                        focusNode: _searchFocus,
+                        style: const TextStyle(fontSize: 14),
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: (v) => AppState.I.addSearchTerm(v),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          border: InputBorder.none,
+                          hintText: tr('search'),
+                        ),
+                      ),
                     ),
-                  ),
+                    if (_searchCtrl.text.isNotEmpty)
+                      SoundInkWell(
+                        onTap: () => _searchCtrl.clear(),
+                        child: Icon(Icons.close, size: 16, color: kFgAlpha(0.5)),
+                      ),
+                  ],
                 ),
-                if (_searchCtrl.text.isNotEmpty)
-                  SoundInkWell(
-                    onTap: () => _searchCtrl.clear(),
-                    child: Icon(Icons.close, size: 16, color: kFgAlpha(0.5)),
-                  ),
-              ],
-            ),
+              );
+            },
           ),
         ],
       ),
@@ -3953,23 +4112,15 @@ class _FavoritesPageState extends State<FavoritesPage> {
               Row(
                 children: [
                   Expanded(
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: kAccent,
-                        inactiveTrackColor: kFgAlpha(0.15),
-                        thumbColor: kAccent,
-                        overlayColor: kAccent.withValues(alpha: 0.15),
-                      ),
-                      child: Slider(
-                        value: _thresholdFor(code).toDouble().clamp(1, 2000),
-                        min: 1,
-                        max: 2000,
-                        onChanged: (v) => setState(() => _draftThreshold[code] = v.round()),
-                        onChangeEnd: (v) async {
-                          await AppState.I.setFavoriteNotifyThreshold(code, v.round());
-                          setState(() => _draftThreshold.remove(code));
-                        },
-                      ),
+                    child: Slider(
+                      value: _thresholdFor(code).toDouble().clamp(1, 2000),
+                      min: 1,
+                      max: 2000,
+                      onChanged: (v) => setState(() => _draftThreshold[code] = v.round()),
+                      onChangeEnd: (v) async {
+                        await AppState.I.setFavoriteNotifyThreshold(code, v.round());
+                        setState(() => _draftThreshold.remove(code));
+                      },
                     ),
                   ),
                   SizedBox(
@@ -4088,22 +4239,14 @@ class _SettingsPageState extends State<SettingsPage> {
                       children: [
                         Text('a', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kFgAlpha(0.5))),
                         Expanded(
-                          child: SliderTheme(
-                            data: SliderTheme.of(context).copyWith(
-                              activeTrackColor: kAccent,
-                              inactiveTrackColor: kFgAlpha(0.15),
-                              thumbColor: kAccent,
-                              overlayColor: kAccent.withValues(alpha: 0.15),
-                            ),
-                            child: Slider(
-                              value: AppState.I.textScale,
-                              min: 0.8,
-                              max: 1.4,
-                              onChanged: (v) {
-                                AppState.I.setTextScale(v);
-                                setState(() {});
-                              },
-                            ),
+                          child: Slider(
+                            value: AppState.I.textScale,
+                            min: 0.8,
+                            max: 1.4,
+                            onChanged: (v) {
+                              AppState.I.setTextScale(v);
+                              setState(() {});
+                            },
                           ),
                         ),
                         Text('A', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: kFgAlpha(0.8))),
