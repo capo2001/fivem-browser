@@ -16,8 +16,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 
 const Color _kDarkBg = Color(0xFF070A0F);
 const Color _kDarkSurface = Color(0xFF10141C);
@@ -191,13 +189,6 @@ const Map<String, Map<String, String>> _strings = {
   'yourStatsFavorites': {'de': 'Favoriten', 'en': 'Favorites', 'fr': 'Favoris', 'es': 'Favoritos', 'pl': 'Ulubione', 'it': 'Preferiti', 'pt': 'Favoritos', 'nl': 'Favorieten', 'tr': 'Favoriler'},
   'yourStatsServersViewed': {'de': 'Angesehen', 'en': 'Viewed', 'fr': 'Consultés', 'es': 'Vistos', 'pl': 'Obejrzanych', 'it': 'Visti', 'pt': 'Vistos', 'nl': 'Bekeken', 'tr': 'Görüntülenen'},
   'yourStatsDaysActive': {'de': 'Tage dabei', 'en': 'Days active', 'fr': 'Jours actifs', 'es': 'Días activo', 'pl': 'Dni aktywności', 'it': 'Giorni attivo', 'pt': 'Dias ativo', 'nl': 'Dagen actief', 'tr': 'Aktif gün'},
-  'removeAdsTitle': {'de': 'Werbefrei', 'en': 'Ad-free', 'fr': 'Sans publicité', 'es': 'Sin anuncios', 'pl': 'Bez reklam', 'it': 'Senza pubblicità', 'pt': 'Sem anúncios', 'nl': 'Advertentievrij', 'tr': 'Reklamsız'},
-  'removeAdsDesc': {'de': 'Entferne alle Werbeanzeigen dauerhaft für 4,99 €', 'en': 'Remove all ads permanently for €4.99', 'fr': 'Supprime toutes les publicités définitivement pour 4,99 €', 'es': 'Elimina todos los anuncios de forma permanente por 4,99 €', 'pl': 'Usuń wszystkie reklamy na stałe za 4,99 €', 'it': 'Rimuovi tutte le pubblicità in modo permanente per 4,99 €', 'pt': 'Remova todos os anúncios permanentemente por 4,99 €', 'nl': 'Verwijder alle advertenties permanent voor € 4,99', 'tr': '4,99 €\'ya tüm reklamları kalıcı olarak kaldır'},
-  'buyRemoveAds': {'de': 'Werbefrei kaufen (4,99 €)', 'en': 'Buy ad-free (€4.99)', 'fr': 'Acheter sans pub (4,99 €)', 'es': 'Comprar sin anuncios (4,99 €)', 'pl': 'Kup bez reklam (4,99 €)', 'it': 'Acquista senza pubblicità (4,99 €)', 'pt': 'Comprar sem anúncios (4,99 €)', 'nl': 'Advertentievrij kopen (€ 4,99)', 'tr': 'Reklamsızı satın al (4,99 €)'},
-  'restorePurchases': {'de': 'Käufe wiederherstellen', 'en': 'Restore purchases', 'fr': 'Restaurer les achats', 'es': 'Restaurar compras', 'pl': 'Przywróć zakupy', 'it': 'Ripristina acquisti', 'pt': 'Restaurar compras', 'nl': 'Aankopen herstellen', 'tr': 'Satın alımları geri yükle'},
-  'adsRemovedActive': {'de': 'Werbefrei ist aktiv - danke für deine Unterstützung!', 'en': 'Ad-free is active - thanks for your support!', 'fr': 'Sans publicité activé - merci pour ton soutien !', 'es': 'Sin anuncios activo: ¡gracias por tu apoyo!', 'pl': 'Tryb bez reklam jest aktywny - dziękujemy za wsparcie!', 'it': 'Modalità senza pubblicità attiva - grazie per il supporto!', 'pt': 'Sem anúncios está ativo - obrigado pelo apoio!', 'nl': 'Advertentievrij is actief - bedankt voor je steun!', 'tr': 'Reklamsız aktif - desteğin için teşekkürler!'},
-  'purchaseUnavailable': {'de': 'Kauf momentan nicht verfügbar. Bitte später erneut versuchen.', 'en': 'Purchase currently unavailable. Please try again later.', 'fr': "Achat actuellement indisponible. Réessaie plus tard.", 'es': 'Compra no disponible por el momento. Inténtalo más tarde.', 'pl': 'Zakup obecnie niedostępny. Spróbuj ponownie później.', 'it': 'Acquisto non disponibile al momento. Riprova più tardi.', 'pt': 'Compra indisponível no momento. Tente novamente mais tarde.', 'nl': 'Aankoop momenteel niet beschikbaar. Probeer het later opnieuw.', 'tr': 'Satın alma şu anda kullanılamıyor. Lütfen daha sonra tekrar dene.'},
-  'restoreStarted': {'de': 'Wiederherstellung gestartet…', 'en': 'Restore started…', 'fr': 'Restauration démarrée…', 'es': 'Restauración iniciada…', 'pl': 'Rozpoczęto przywracanie…', 'it': 'Ripristino avviato…', 'pt': 'Restauração iniciada…', 'nl': 'Herstel gestart…', 'tr': 'Geri yükleme başlatıldı…'},
   'themeLight': {'de': 'Hell', 'en': 'Light', 'fr': 'Clair', 'es': 'Claro', 'pl': 'Jasny', 'it': 'Chiaro', 'pt': 'Claro', 'nl': 'Licht', 'tr': 'Açık'},
   'themeDark': {'de': 'Dunkel', 'en': 'Dark', 'fr': 'Sombre', 'es': 'Oscuro', 'pl': 'Ciemny', 'it': 'Scuro', 'pt': 'Escuro', 'nl': 'Donker', 'tr': 'Koyu'},
   'themeAuto': {'de': 'Automatisch', 'en': 'Automatic', 'fr': 'Automatique', 'es': 'Automático', 'pl': 'Automatyczny', 'it': 'Automatico', 'pt': 'Automático', 'nl': 'Automatisch', 'tr': 'Otomatik'},
@@ -270,7 +261,6 @@ class AppState extends ChangeNotifier {
   bool tutorialSeen = false;
   int serverViewCount = 0;
   DateTime firstLaunchDate = DateTime.now();
-  bool adsRemoved = false;
 
   bool get isDark {
     if (themeMode == 'auto') {
@@ -313,7 +303,6 @@ class AppState extends ChangeNotifier {
     } else {
       firstLaunchDate = DateTime.fromMillisecondsSinceEpoch(firstLaunchMillis);
     }
-    adsRemoved = prefs.getBool('adsRemoved') ?? false;
   }
 
   Future<void> _persist() async {
@@ -333,13 +322,6 @@ class AppState extends ChangeNotifier {
     await prefs.setBool('onboardingDone', onboardingDone);
     await prefs.setBool('tutorialSeen', tutorialSeen);
     await prefs.setInt('serverViewCount', serverViewCount);
-    await prefs.setBool('adsRemoved', adsRemoved);
-  }
-
-  Future<void> setAdsRemoved(bool value) async {
-    adsRemoved = value;
-    notifyListeners();
-    await _persist();
   }
 
   Future<void> incrementServerViewCount() async {
@@ -539,191 +521,6 @@ class WidgetService {
       await HomeWidget.updateWidget(name: _miniProviderName);
     } catch (_) {
       // Best-effort only - a missing widget/host device shouldn't crash anything.
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Ads (AdMob) - currently wired to Google's official TEST ad unit IDs and
-// the official TEST App ID (see AndroidManifest patch in the CI workflow),
-// so only placeholder test ads render right now. Swap the two ad unit ID
-// constants below and the manifest's APPLICATION_ID meta-data with real
-// AdMob values once a real AdMob account/app exists.
-// ---------------------------------------------------------------------------
-
-class AdService {
-  static const String bannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
-  static const String interstitialAdUnitId = 'ca-app-pub-3940256099942544/1033173712';
-
-  static Future<void> init() async {
-    try {
-      await MobileAds.instance.initialize();
-    } catch (_) {
-      // Best-effort only - ads are non-essential, never block the app.
-    }
-  }
-}
-
-class BannerAdWidget extends StatefulWidget {
-  const BannerAdWidget({super.key});
-
-  @override
-  State<BannerAdWidget> createState() => _BannerAdWidgetState();
-}
-
-class _BannerAdWidgetState extends State<BannerAdWidget> {
-  BannerAd? _ad;
-
-  @override
-  void initState() {
-    super.initState();
-    if (!AppState.I.adsRemoved) _load();
-  }
-
-  void _load() {
-    BannerAd(
-      adUnitId: AdService.bannerAdUnitId,
-      size: AdSize.banner,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (!mounted) {
-            ad.dispose();
-            return;
-          }
-          setState(() => _ad = ad as BannerAd);
-        },
-        onAdFailedToLoad: (ad, error) => ad.dispose(),
-      ),
-    ).load();
-  }
-
-  @override
-  void dispose() {
-    _ad?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (AppState.I.adsRemoved || _ad == null) return const SizedBox.shrink();
-    return Center(
-      child: SizedBox(
-        width: _ad!.size.width.toDouble(),
-        height: _ad!.size.height.toDouble(),
-        child: AdWidget(ad: _ad!),
-      ),
-    );
-  }
-}
-
-// Interstitials are only ever triggered from a natural transition point
-// (returning to the main menu after finishing something on another page),
-// never on a blind timer that could interrupt an in-progress action - and
-// never more often than once every few minutes, per AdMob placement policy.
-class InterstitialAdManager {
-  static InterstitialAd? _ad;
-  static DateTime? _lastShown;
-  static const Duration _minGap = Duration(minutes: 4);
-  static bool _loading = false;
-
-  static void preload() {
-    if (AppState.I.adsRemoved || _ad != null || _loading) return;
-    _loading = true;
-    InterstitialAd.load(
-      adUnitId: AdService.interstitialAdUnitId,
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _loading = false;
-          _ad = ad;
-          ad.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              _ad = null;
-              preload();
-            },
-            onAdFailedToShowFullScreenContent: (ad, error) {
-              ad.dispose();
-              _ad = null;
-            },
-          );
-        },
-        onAdFailedToLoad: (error) {
-          _loading = false;
-          _ad = null;
-        },
-      ),
-    );
-  }
-
-  static void maybeShow() {
-    if (AppState.I.adsRemoved) return;
-    final now = DateTime.now();
-    if (_lastShown != null && now.difference(_lastShown!) < _minGap) return;
-    final ad = _ad;
-    if (ad == null) {
-      preload();
-      return;
-    }
-    _lastShown = now;
-    ad.show();
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Ad-free purchase (Google Play Billing via in_app_purchase). The product
-// id below is a placeholder - create a matching in-app product in Play
-// Console (one-time, non-consumable, priced at 4.99EUR) before this can
-// actually complete a purchase; until then the purchase flow will fail
-// gracefully with "product not found".
-// ---------------------------------------------------------------------------
-
-class PurchaseService {
-  static const String removeAdsProductId = 'remove_ads_499';
-  static StreamSubscription<List<PurchaseDetails>>? _subscription;
-
-  static void init() {
-    _subscription = InAppPurchase.instance.purchaseStream.listen(
-      _onPurchaseUpdate,
-      onError: (_) {},
-    );
-  }
-
-  static void _onPurchaseUpdate(List<PurchaseDetails> purchases) async {
-    for (final purchase in purchases) {
-      if (purchase.productID == removeAdsProductId &&
-          (purchase.status == PurchaseStatus.purchased || purchase.status == PurchaseStatus.restored)) {
-        await AppState.I.setAdsRemoved(true);
-      }
-      if (purchase.pendingCompletePurchase) {
-        await InAppPurchase.instance.completePurchase(purchase);
-      }
-    }
-  }
-
-  // Returns true once the platform purchase sheet has been launched
-  // (completion arrives later via the purchase stream); false if the
-  // store is unreachable or the product doesn't exist yet.
-  static Future<bool> buyRemoveAds() async {
-    try {
-      final available = await InAppPurchase.instance.isAvailable();
-      if (!available) return false;
-      final response = await InAppPurchase.instance.queryProductDetails({removeAdsProductId});
-      if (response.productDetails.isEmpty) return false;
-      final param = PurchaseParam(productDetails: response.productDetails.first);
-      await InAppPurchase.instance.buyNonConsumable(purchaseParam: param);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  static Future<void> restore() async {
-    try {
-      await InAppPurchase.instance.restorePurchases();
-    } catch (_) {
-      // Best-effort only.
     }
   }
 }
@@ -951,12 +748,6 @@ void main() {
     } catch (_) {
       // Background scheduling is best-effort; the app still works without it.
     }
-    try {
-      await AdService.init();
-      PurchaseService.init();
-    } catch (_) {
-      // Ads/purchases are best-effort; the app still works without them.
-    }
     runApp(const FivemBrowserApp());
   }, (error, stack) {
     debugPrint('Uncaught error: $error\n$stack');
@@ -993,10 +784,6 @@ class _SmoothPageTransitionsBuilder extends PageTransitionsBuilder {
 }
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
-// Lets MainMenuPage detect "returned to the main menu after popping a
-// page" (didPopNext) - the one natural point where an interstitial ad may
-// be shown.
-final RouteObserver<PageRoute> appRouteObserver = RouteObserver<PageRoute>();
 
 class FivemBrowserApp extends StatefulWidget {
   const FivemBrowserApp({super.key});
@@ -1069,7 +856,6 @@ class _FivemBrowserAppState extends State<FivemBrowserApp> with WidgetsBindingOb
         );
         return MaterialApp(
           navigatorKey: appNavigatorKey,
-          navigatorObservers: [appRouteObserver],
           title: 'Fserver',
           debugShowCheckedModeBanner: false,
           theme: base.copyWith(
@@ -3557,7 +3343,7 @@ class MainMenuPage extends StatefulWidget {
   State<MainMenuPage> createState() => _MainMenuPageState();
 }
 
-class _MainMenuPageState extends State<MainMenuPage> with RouteAware {
+class _MainMenuPageState extends State<MainMenuPage> {
   final _serverListKey = GlobalKey();
   final _favoritesKey = GlobalKey();
   final _historyKey = GlobalKey();
@@ -3575,22 +3361,6 @@ class _MainMenuPageState extends State<MainMenuPage> with RouteAware {
       WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial());
     }
     _loadStats();
-    InterstitialAdManager.preload();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final route = ModalRoute.of(context);
-    if (route is PageRoute) appRouteObserver.subscribe(this, route);
-  }
-
-  // Called when a page pushed on top of this one gets popped, i.e. the
-  // user just returned to the main menu - the one natural point where an
-  // interstitial ad may appear (never mid-action).
-  @override
-  void didPopNext() {
-    InterstitialAdManager.maybeShow();
   }
 
   Future<void> _loadStats() async {
@@ -3634,7 +3404,6 @@ class _MainMenuPageState extends State<MainMenuPage> with RouteAware {
 
   @override
   void dispose() {
-    appRouteObserver.unsubscribe(this);
     _tutorialEntry?.remove();
     super.dispose();
   }
@@ -3646,7 +3415,6 @@ class _MainMenuPageState extends State<MainMenuPage> with RouteAware {
       builder: (context, _) {
         return Scaffold(
           backgroundColor: kBg,
-          bottomNavigationBar: const SafeArea(top: false, child: BannerAdWidget()),
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
@@ -4707,79 +4475,6 @@ class _SettingsPageState extends State<SettingsPage> {
                           },
                         ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _sectionLabel(tr('removeAdsTitle')),
-                  const SizedBox(height: 8),
-                  // Wrapped in its own listener since a purchase can complete
-                  // asynchronously (via the platform purchase sheet) while
-                  // this page is already open, not just from a tap here.
-                  AnimatedBuilder(
-                    animation: AppState.I,
-                    builder: (context, _) => GlassPanel(
-                    child: AppState.I.adsRemoved
-                        ? Row(
-                            children: [
-                              Icon(Icons.check_circle_rounded, color: kAccent, size: 20),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  tr('adsRemovedActive'),
-                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(tr('removeAdsDesc'), style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.7))),
-                              const SizedBox(height: 12),
-                              SoundInkWell(
-                                borderRadius: BorderRadius.circular(kRadius),
-                                onTap: () async {
-                                  final started = await PurchaseService.buyRemoveAds();
-                                  if (!context.mounted) return;
-                                  if (!started) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(tr('purchaseUnavailable'))),
-                                    );
-                                  }
-                                },
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  decoration: BoxDecoration(color: kAccent, borderRadius: BorderRadius.circular(kRadius)),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    tr('buyRemoveAds'),
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              SoundInkWell(
-                                borderRadius: BorderRadius.circular(kRadius),
-                                onTap: () async {
-                                  await PurchaseService.restore();
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(tr('restoreStarted'))),
-                                  );
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 8),
-                                  child: Center(
-                                    child: Text(
-                                      tr('restorePurchases'),
-                                      style: TextStyle(fontSize: 12.5, color: kFgAlpha(0.7), fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                     ),
                   ),
                   const SizedBox(height: 20),
