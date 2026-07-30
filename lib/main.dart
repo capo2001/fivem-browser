@@ -16,6 +16,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:quick_actions/quick_actions.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
 
 const Color _kDarkBg = Color(0xFF070A0F);
 const Color _kDarkSurface = Color(0xFF10141C);
@@ -261,6 +262,15 @@ class AppState extends ChangeNotifier {
   bool tutorialSeen = false;
   int serverViewCount = 0;
   DateTime firstLaunchDate = DateTime.now();
+  // Server-list filter panel state, persisted so filters are still active
+  // the next time the list is opened (including after an app restart).
+  bool filterHideEmpty = false;
+  bool filterHideFull = false;
+  String? filterSelectedCountry;
+  Map<String, TagState> filterTagStates = {};
+  SortMode filterSortMode = SortMode.defaultOrder;
+  double filterPlayerRangeStart = 0;
+  double filterPlayerRangeEnd = kPlayerRangeMax;
 
   bool get isDark {
     if (themeMode == 'auto') {
@@ -303,6 +313,17 @@ class AppState extends ChangeNotifier {
     } else {
       firstLaunchDate = DateTime.fromMillisecondsSinceEpoch(firstLaunchMillis);
     }
+    filterHideEmpty = prefs.getBool('filterHideEmpty') ?? false;
+    filterHideFull = prefs.getBool('filterHideFull') ?? false;
+    filterSelectedCountry = prefs.getString('filterSelectedCountry');
+    filterTagStates = {
+      for (final entry in prefs.getStringList('filterTagStates') ?? const [])
+        if (entry.contains(':'))
+          entry.split(':').first: TagState.values[int.tryParse(entry.split(':').last) ?? 0],
+    };
+    filterSortMode = SortMode.values[prefs.getInt('filterSortMode') ?? 0];
+    filterPlayerRangeStart = prefs.getDouble('filterPlayerRangeStart') ?? 0;
+    filterPlayerRangeEnd = prefs.getDouble('filterPlayerRangeEnd') ?? kPlayerRangeMax;
   }
 
   Future<void> _persist() async {
@@ -322,6 +343,19 @@ class AppState extends ChangeNotifier {
     await prefs.setBool('onboardingDone', onboardingDone);
     await prefs.setBool('tutorialSeen', tutorialSeen);
     await prefs.setInt('serverViewCount', serverViewCount);
+    await prefs.setBool('filterHideEmpty', filterHideEmpty);
+    await prefs.setBool('filterHideFull', filterHideFull);
+    final country = filterSelectedCountry;
+    if (country != null) {
+      await prefs.setString('filterSelectedCountry', country);
+    } else {
+      await prefs.remove('filterSelectedCountry');
+    }
+    await prefs.setStringList(
+        'filterTagStates', [for (final e in filterTagStates.entries) '${e.key}:${e.value.index}']);
+    await prefs.setInt('filterSortMode', filterSortMode.index);
+    await prefs.setDouble('filterPlayerRangeStart', filterPlayerRangeStart);
+    await prefs.setDouble('filterPlayerRangeEnd', filterPlayerRangeEnd);
   }
 
   Future<void> incrementServerViewCount() async {
@@ -432,6 +466,24 @@ class AppState extends ChangeNotifier {
     if (!favoriteThresholds.containsKey(code)) return;
     favoriteThresholds[code] = value;
     notifyListeners();
+    await _persist();
+  }
+
+  Future<void> saveServerListFilters({
+    required bool hideEmpty,
+    required bool hideFull,
+    required String? selectedCountry,
+    required Map<String, TagState> tagStates,
+    required SortMode sortMode,
+    required RangeValues playerRange,
+  }) async {
+    filterHideEmpty = hideEmpty;
+    filterHideFull = hideFull;
+    filterSelectedCountry = selectedCountry;
+    filterTagStates = Map.of(tagStates);
+    filterSortMode = sortMode;
+    filterPlayerRangeStart = playerRange.start;
+    filterPlayerRangeEnd = playerRange.end;
     await _persist();
   }
 
@@ -1361,7 +1413,25 @@ class ApiService {
     'https://servers-frontend.fivem.net/api/servers/single/',
   ];
 
-  static Future<List<GameServer>> fetchTopServers() async {
+  // Short-lived in-memory cache of the last successful full server dump.
+  // The main menu stats bar, the top-region list, favorites and the
+  // server list page each call fetchTopServers() independently, often
+  // within a second or two of each other while navigating between
+  // screens - without this they'd each redownload and reparse the same
+  // multi-megabyte, tens-of-thousands-of-entries dump from scratch.
+  static List<GameServer>? _memCache;
+  static DateTime? _memCacheAt;
+  static const Duration _memCacheTtl = Duration(seconds: 25);
+
+  static const String _diskCacheFileName = 'servers_cache.bin';
+
+  static Future<List<GameServer>> fetchTopServers({bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        _memCache != null &&
+        _memCacheAt != null &&
+        DateTime.now().difference(_memCacheAt!) < _memCacheTtl) {
+      return _memCache!;
+    }
     final attemptErrors = <String>[];
     for (final url in _topUrls) {
       try {
@@ -1372,7 +1442,12 @@ class ApiService {
         if (res.statusCode == 200) {
           final bytes = Uint8List.fromList(_gunzipIfNeeded(res.bodyBytes));
           final servers = await compute(_parseList, bytes);
-          if (servers.isNotEmpty) return servers;
+          if (servers.isNotEmpty) {
+            _memCache = servers;
+            _memCacheAt = DateTime.now();
+            _writeDiskCache(bytes);
+            return servers;
+          }
           attemptErrors.add('$url: leere Antwort');
         } else {
           attemptErrors.add('$url: HTTP ${res.statusCode}');
@@ -1383,6 +1458,59 @@ class ApiService {
     }
     throw ApiException(
         'Serverliste konnte nicht geladen werden.\n${attemptErrors.join('\n')}');
+  }
+
+  // Wipes both the in-memory and on-disk server-list snapshots, used by
+  // the "clear app cache" Settings button.
+  static Future<void> clearCache() async {
+    _memCache = null;
+    _memCacheAt = null;
+    try {
+      final file = await _diskCacheFile();
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // Best-effort only.
+    }
+  }
+
+  static Future<File> _diskCacheFile() async {
+    final dir = await getTemporaryDirectory();
+    return File('${dir.path}/$_diskCacheFileName');
+  }
+
+  // Best-effort snapshot of the raw (already-decompressed) dump so the
+  // next cold start has something to show instantly. Never allowed to
+  // throw into the caller, since a fresh fetch just succeeded regardless.
+  static Future<void> _writeDiskCache(Uint8List bytes) async {
+    try {
+      final file = await _diskCacheFile();
+      await file.writeAsBytes(bytes, flush: false);
+    } catch (_) {
+      // Best-effort only.
+    }
+  }
+
+  // Loads the on-disk snapshot from the previous successful fetch (which
+  // may be from an earlier app run) so a page can render the server list
+  // immediately instead of showing a spinner while the real network
+  // fetch is still in flight. Returns null if there's no cache yet, it
+  // fails to read/parse, or a fetch already warmed the in-memory cache
+  // this session. The result is treated as stale so the next
+  // fetchTopServers() call still goes to the network.
+  static Future<List<GameServer>?> loadDiskCache() async {
+    if (_memCache != null) return _memCache;
+    try {
+      final file = await _diskCacheFile();
+      if (!await file.exists()) return null;
+      final bytes = await file.readAsBytes();
+      final servers = await compute(_parseList, Uint8List.fromList(bytes));
+      if (servers.isEmpty) return null;
+      _memCache = servers;
+      _memCacheAt = DateTime.now().subtract(_memCacheTtl);
+      return servers;
+    } catch (_) {
+      return null;
+    }
   }
 
   // The stream feed is NOT JSON: it's a sequence of length-prefixed
@@ -1851,12 +1979,12 @@ class _ServerListPageState extends State<ServerListPage> {
   bool _filtersOpen = false;
   final TextEditingController _searchCtrl = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
-  bool _hideEmpty = false;
-  bool _hideFull = false;
-  String? _selectedCountry;
-  final Map<String, TagState> _tagStates = {};
-  SortMode _sortMode = SortMode.defaultOrder;
-  RangeValues _playerRange = const RangeValues(0, kPlayerRangeMax);
+  bool _hideEmpty = AppState.I.filterHideEmpty;
+  bool _hideFull = AppState.I.filterHideFull;
+  String? _selectedCountry = AppState.I.filterSelectedCountry;
+  final Map<String, TagState> _tagStates = Map.of(AppState.I.filterTagStates);
+  SortMode _sortMode = AppState.I.filterSortMode;
+  RangeValues _playerRange = RangeValues(AppState.I.filterPlayerRangeStart, AppState.I.filterPlayerRangeEnd);
   Timer? _countdownTimer;
   int _secondsUntilRefresh = 0;
   // In-memory only (not persisted - the full feed has 30k+ codes, far too
@@ -1901,14 +2029,28 @@ class _ServerListPageState extends State<ServerListPage> {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool forceRefresh = false}) async {
+    // On the very first load, paint a cached snapshot (this session's or,
+    // failing that, the previous app run's) right away instead of a bare
+    // spinner, then let the network fetch below silently refresh it.
+    if (_servers.isEmpty && _previousCodes == null) {
+      final cached = await ApiService.loadDiskCache();
+      if (cached != null && mounted && _servers.isEmpty) {
+        cached.sort((a, b) => b.upvotePower.compareTo(a.upvotePower));
+        setState(() {
+          _servers = cached;
+          _topTags = _computeTopTags(cached);
+          _previousCodes = cached.map((s) => s.code).toSet();
+        });
+      }
+    }
     setState(() {
-      _loading = true;
+      _loading = _servers.isEmpty;
       _error = null;
       _secondsUntilRefresh = _autoRefreshSeconds;
     });
     try {
-      final servers = await ApiService.fetchTopServers();
+      final servers = await ApiService.fetchTopServers(forceRefresh: forceRefresh);
       servers.sort((a, b) => b.upvotePower.compareTo(a.upvotePower));
       final codes = servers.map((s) => s.code).toSet();
       final newCodes = _previousCodes == null ? <String>{} : codes.difference(_previousCodes!);
@@ -1920,6 +2062,7 @@ class _ServerListPageState extends State<ServerListPage> {
         _loading = false;
       });
     } catch (e) {
+      if (_servers.isNotEmpty) return; // already showing cached/previous data - fail silently
       setState(() {
         _error = e.toString();
         _loading = false;
@@ -2001,6 +2144,18 @@ class _ServerListPageState extends State<ServerListPage> {
           break;
       }
     });
+    _saveFilters();
+  }
+
+  void _saveFilters() {
+    AppState.I.saveServerListFilters(
+      hideEmpty: _hideEmpty,
+      hideFull: _hideFull,
+      selectedCountry: _selectedCountry,
+      tagStates: _tagStates,
+      sortMode: _sortMode,
+      playerRange: _playerRange,
+    );
   }
 
   static String _formatCountdown(int seconds) {
@@ -2146,7 +2301,10 @@ class _ServerListPageState extends State<ServerListPage> {
                   child: Pill(
                     text: tr('hideEmpty'),
                     active: _hideEmpty,
-                    onTap: () => setState(() => _hideEmpty = !_hideEmpty),
+                    onTap: () {
+                      setState(() => _hideEmpty = !_hideEmpty);
+                      _saveFilters();
+                    },
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -2154,7 +2312,10 @@ class _ServerListPageState extends State<ServerListPage> {
                   child: Pill(
                     text: tr('hideFull'),
                     active: _hideFull,
-                    onTap: () => setState(() => _hideFull = !_hideFull),
+                    onTap: () {
+                      setState(() => _hideFull = !_hideFull);
+                      _saveFilters();
+                    },
                   ),
                 ),
               ],
@@ -2169,17 +2330,26 @@ class _ServerListPageState extends State<ServerListPage> {
                 Pill(
                   text: tr('sortDefault'),
                   active: _sortMode == SortMode.defaultOrder,
-                  onTap: () => setState(() => _sortMode = SortMode.defaultOrder),
+                  onTap: () {
+                    setState(() => _sortMode = SortMode.defaultOrder);
+                    _saveFilters();
+                  },
                 ),
                 Pill(
                   text: tr('sortMostPlayers'),
                   active: _sortMode == SortMode.mostPlayers,
-                  onTap: () => setState(() => _sortMode = SortMode.mostPlayers),
+                  onTap: () {
+                    setState(() => _sortMode = SortMode.mostPlayers);
+                    _saveFilters();
+                  },
                 ),
                 Pill(
                   text: tr('sortMostBoost'),
                   active: _sortMode == SortMode.mostBoost,
-                  onTap: () => setState(() => _sortMode = SortMode.mostBoost),
+                  onTap: () {
+                    setState(() => _sortMode = SortMode.mostBoost);
+                    _saveFilters();
+                  },
                 ),
               ],
             ),
@@ -2209,6 +2379,7 @@ class _ServerListPageState extends State<ServerListPage> {
                 activeColor: kAccent,
                 inactiveColor: kFgAlpha(0.12),
                 onChanged: (v) => setState(() => _playerRange = v),
+                onChangeEnd: (v) => _saveFilters(),
               ),
             ),
             if (countries.isNotEmpty) ...[
@@ -2224,9 +2395,12 @@ class _ServerListPageState extends State<ServerListPage> {
                     text: c,
                     leading: CountryFlag(code: c, width: 16),
                     active: active,
-                    onTap: () => setState(() {
-                      _selectedCountry = active ? null : c;
-                    }),
+                    onTap: () {
+                      setState(() {
+                        _selectedCountry = active ? null : c;
+                      });
+                      _saveFilters();
+                    },
                   );
                 }).toList(),
               ),
@@ -2321,7 +2495,7 @@ class _ServerListPageState extends State<ServerListPage> {
       );
     }
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: () => _load(forceRefresh: true),
       color: kAccent,
       backgroundColor: kSurface,
       child: ListView.separated(
@@ -4522,6 +4696,7 @@ class _SettingsPageState extends State<SettingsPage> {
     SoundService.tap();
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
+    ApiService.clearCache();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
